@@ -8,7 +8,7 @@ NUM_JOBs = 16
 
 # ========= verilator ==============
 TOPNAME = tb
-INC_PATH ?= /home/shiroha/Code/ysyx/ysyx-workbench/npc/src/csrc/include \
+INC_PATH ?= /home/shiroha/Code/ysyx/ysyx-workbench/ml-accelerator/src/csrc/include \
 			/usr/lib/llvm-11/include # for disasm 
 
 VERILATOR = verilator
@@ -51,8 +51,6 @@ test:
 	mill -i __.test
 
 verilog:
-	$(call git_commit, "generate verilog")
-# mkdir -p $(BUILD_DIR)
 	$(shell mkdir -p $(BUILD_DIR))
 	mill -i __.test.runMain Elaborate $(BUILD_DIR) -j ${NUM_JOBs} -X mverilog
 # mill -i __.test.runMain Elaborate -td $(BUILD_DIR) 
@@ -60,13 +58,8 @@ verilog:
 
 
 sim:
-	$(call git_commit, "sim RTL") # DO NOT REMOVE THIS LINE!!!
 	$(BIN) $(ARGS)
 	  @$^
-# 关于$(BIN)放在前后的对比（sim任务和default任务的不同）
-# default任务中$(BIN)放在default:后，表示依赖于$(BIN),在执行default前会先构建$(BIN)
-# sim任务中$(BIN)放在命令行中，表示普通的指令，即执行该可执行文件，而不会进行构建
-# 所以这个任务，只负责执行，不进行可执行文件的生成
 
 help:
 	mill -i __.test.runMain Elaborate --help
