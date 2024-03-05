@@ -4,6 +4,8 @@
 #include <readline/readline.h>
 #include <readline/history.h>
 
+extern int tet_step;
+
 static int is_batch_mode = false;
 
 static char* rl_gets() {
@@ -12,7 +14,7 @@ static char* rl_gets() {
 		free(line_read);
 		line_read = NULL;
     }
-    line_read = readline("(npc) "); 
+    line_read = readline("(TET) "); 
 
     if (line_read && *line_read) {
       	add_history(line_read);
@@ -42,12 +44,13 @@ static struct {
 
 static int sdb_exec_once(int step) {
     while(step--) {
-        npc_exec_once();
-
-		nemu_step++;
+        tet_exec_once();
+		tet_step++;
     }
     return 0;
 }
+
+#define NR_CMD ARRLEN(cmd_table)
 
 static int cmd_help(char *args) {
 	/* extract the first argument */

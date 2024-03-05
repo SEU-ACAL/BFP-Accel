@@ -9,19 +9,7 @@ VerilatedContext* contextp = NULL;
 VerilatedVcdC* tfp = NULL;
 static Vtb* top;
 
-
-ll img_size = 0;
-
-CPU_state cpu_npc;  // DUT
-CPU_state cpu_nemu; // REF
-
-NPCState npc_state;
-
-// bool diff_skip_ref_flag = false;
-int diff_skip_ref_flag = 0;
-
-int nemu_step = 1; // 记录nemu一共走了多少步，出错时抛出，方便单步调试到周围 
-
+int tet_step = 1; // 记录一共走了多少步，出错时抛出，方便单步调试到周围 
 
 //================ SIM FUNCTION =====================//
 void step_and_dump_wave() {
@@ -67,7 +55,7 @@ void sim_exit() {
 //     } // pc先走拍到第一条指令执行结束
 // }
 
-
+//================ main =====================//
 int main(int argc, char *argv[]) {
     sim_init();
 

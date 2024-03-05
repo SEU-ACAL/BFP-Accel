@@ -28,8 +28,8 @@ CSRCS = $(shell find $(abspath ./src/csrc) -name "*.c" -or -name "*.cc" -or -nam
 
 # rules for verilator
 INCFLAGS = $(addprefix -I, $(INC_PATH))
-CFLAGS += $(INCFLAGS) -DTOP_NAME="\"V$(TOPNAME)\"" #-Og -ggdb3 # -Og -ggdb3为添加gdb调试
-LDFLAGS += -lSDL2 -lSDL2_image "-ldl $(shell llvm-config-11 --cxxflags) -fPIE $(shell llvm-config-11 --libs)" -lreadline
+CFLAGS  += $(INCFLAGS) -DTOP_NAME="\"V$(TOPNAME)\"" #-Og -ggdb3 # -Og -ggdb3为添加gdb调试
+LDFLAGS += -lreadline
 # 使用readline函数的是否需要链接-lreadline
 # ====================================
 
@@ -52,7 +52,7 @@ test:
 
 verilog:
 	$(shell mkdir -p $(BUILD_DIR))
-	mill -i __.test.runMain Elaborate $(BUILD_DIR) -j ${NUM_JOBs} -X mverilog
+	mill --jobs ${NUM_JOBs}	-i __.test.runMain Elaborate	PathModule/targetDirectory=$(BUILD_DIR)	-X mverilog
 # mill -i __.test.runMain Elaborate -td $(BUILD_DIR) 
 # -X mverilog 生成verilog取消优化
 

@@ -1,11 +1,3 @@
-/*************************************************************************
-    > File Name: Elaborate.scala
-    > Author: shiroha
-    > Email: whmio0115@hainanu.edu.cn
-    > Created Time: 2023-10-23 15:37:21
-    > Description: 
-*************************************************************************/
-
 import circt.stage._
 
 import tb._
