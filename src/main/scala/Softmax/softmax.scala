@@ -63,13 +63,15 @@ class SoftMaxEN_Input extends Bundle {
 }
 
 class SoftMax_Output extends Bundle {
-    val data_out = Output(Vec(dataout_bandwidth, UInt(bitwidth.W)))
+    val data_out = Output(Valid(Vec(dataout_bandwidth, UInt(bitwidth.W))))
+    val end      = Output(Bool())
+    // val start    = Output(Bool())
 }
 
 class softmax extends Module {
     val da_input  = IO(Flipped(Decoupled(new SoftMaxDA_Input)))
     val en_input  = IO(Flipped(Decoupled(new SoftMaxEN_Input)))
-    val output    = IO(Valid(new SoftMax_Output))
+    val output    = IO(new SoftMax_Output)
 
     val Max_Reg            = RegInit(0.S(bitwidth.W))
     val Partial_Sum_buffer = RegInit(VecInit(Seq.fill(datain_line_num)(0.S((bitwidth*2).W))))
@@ -84,7 +86,7 @@ class softmax extends Module {
     val start = WireInit(false.B)
     val end   = WireInit(false.B)
     val val_buffer_full = WireInit(false.B)
-    start    := da_input.valid & da_input.ready
+    start    := da_input.valid 
     end      := 0.U
 
     switch (state) {
@@ -121,17 +123,19 @@ class softmax extends Module {
 
     // ================== DA stage =========================================== // 
     // ================ step 0 init counter 
-    da_input.ready := 1.U
-    val Counter_inst  = Module(new Counter(t = datain_line_num+1))
-    Counter_inst.io.en := Mux(state === sRunDA, true.B, false.B)
+    val DACounter_inst  = Module(new Counter(t = datain_line_num+1))
+    DACounter_inst.io.en := Mux(state === sRunDA, true.B, false.B)
     val da_line_num = RegInit(0.U(log2datain_line_num.W)) 
-    da_line_num :=  Counter_inst.io.cnt_num 
+    da_line_num :=  DACounter_inst.io.cnt_num 
 
     val DA_inst = Module(new DAUnit(bitwidth)).io
-    DA_inst.en          := state === sRunDA && da_line_num < datain_line_num.U && Counter_inst.io.cnt_num > 0.U 
+    DA_inst.en          := state === sRunDA && da_line_num < datain_line_num.U && DACounter_inst.io.cnt_num > 0.U 
     DA_inst.line_data_i := da_input.bits.data_in
     DA_inst.line_idx_i  := da_line_num
     DA_inst.max_reg_i   := Max_Reg
+
+    da_input.ready := DA_inst.en
+
 
     when (DA_inst.max_reg_o.valid) {
         Max_Reg  := DA_inst.max_reg_o.bits
@@ -161,28 +165,37 @@ class softmax extends Module {
 
     when (DI_inst.inv_o.valid) {
         Partial_Sum_buffer(DI_inst.line_idx_o) := DI_inst.inv_o.bits
-        inv_buffer                      := inv_buffer.bitSet(DI_inst.line_idx_o, true.B)
+        inv_buffer      := inv_buffer.bitSet(DI_inst.line_idx_o, true.B)
     }
 
     // ================== EN stage =========================================== // 
-    output.valid := false.B
-    for(i <- 0 until dataout_bandwidth) { output.bits.data_out(i) := 0.U }
+    val ENCounter_inst  = Module(new Counter(t = datain_line_num+1))
+    ENCounter_inst.io.en := Mux(state === sRunEN, true.B, false.B)
+    val en_line_num = RegInit(0.U(log2datain_line_num.W)) 
+    en_line_num :=  ENCounter_inst.io.cnt_num 
+
+    output.data_out.valid := false.B
+    output.end := false.B
+    for(i <- 0 until dataout_bandwidth) { output.data_out.bits(i) := 0.U }
 
     val en_insts = VecInit(Seq.fill(numElements)(Module(new ENUnit(bitwidth)).io))
     en_input.ready := state === sRunEN 
-    when (output.valid) { printf("[EN] ");}
+    when (output.data_out.valid) { printf("[EN] line %d ", en_insts(0).line_idx_o);}
     for (i <- 0 until numElements) {
-        en_insts(i).en      := state === sRunEN 
-        en_insts(i).max_i   := Max_Reg
-        en_insts(i).inv_i   := Partial_Sum_buffer(i)
-        en_insts(i).x_i     := en_input.bits.data_in(i) 
-        output.valid        := en_insts(i).softmax_o.valid 
-        output.bits.data_out(i) := en_insts(i).softmax_o.bits 
-        when (output.valid) {
+        en_insts(i).en          := state === sRunEN 
+        en_insts(i).max_i       := Max_Reg
+        en_insts(i).inv_i       := Partial_Sum_buffer(i)
+        en_insts(i).x_i         := en_input.bits.data_in(i) 
+        en_insts(i).line_idx_i  := en_line_num
+        output.data_out.valid   := en_insts(i).softmax_o.valid 
+        output.data_out.bits(i) := en_insts(i).softmax_o.bits 
+        when (output.data_out.valid) {
             printf("%d ", en_insts(i).softmax_o.bits);
         }
     }
-    when (output.valid) { printf("\n");}
+    when (output.data_out.valid) { printf("\n");}
+    when (end)  { output.end := true.B }
+    end := en_insts(0).line_idx_o === (datain_line_num-1).U
 }
 
 class DAUnit(bitwidth: Int) extends Module {
@@ -242,8 +255,8 @@ class ENUnit(bitwidth: Int) extends Module {
         val max_i      = Input(SInt(bitwidth.W))
         val inv_i      = Input(SInt((bitwidth*2).W))
         val x_i        = Input(SInt(bitwidth.W))
-        // val line_idx_i = Input(UInt(log2datain_line_num.W))
-        // val line_idx_o = Output(UInt(log2datain_line_num.W))
+        val line_idx_i = Input(UInt(log2datain_line_num.W))
+        val line_idx_o = Output(UInt(log2datain_line_num.W))
         val softmax_o  = Output(Valid(UInt(bitwidth.W)))
     })
     // calculate x_q
@@ -263,6 +276,6 @@ class ENUnit(bitwidth: Int) extends Module {
         io.softmax_o.valid := false.B
         io.softmax_o.bits  := 0.U
     }
-
+    io.line_idx_o := io.line_idx_i
 }
 

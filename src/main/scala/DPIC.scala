@@ -8,13 +8,15 @@ import define.MACRO._
 
 class softmax_input_line extends BlackBox with HasBlackBoxInline {
     val io = IO(new Bundle{
+        val en        = Input(UInt(1.W)) 
         val line_num  = Input(UInt(log2datain_line_num.W)) 
         val line_data = Output(Vec(datain_bandwidth, SInt(bitwidth.W)))
     })
     setInline("softmax_input_line.v",
     """
-    |import "DPI-C" function void softmax_read_matrix(input int line_num, output byte line_data[16]);
+    |import "DPI-C" function void softmax_read_matrix(input bit en, input int line_num, output byte line_data[16]);
     |module softmax_input_line (
+    |   input        en,
     |   input  [3:0] line_num,
     |   output [7:0] line_data_0,
     |   output [7:0] line_data_1,
@@ -53,7 +55,7 @@ class softmax_input_line extends BlackBox with HasBlackBoxInline {
     |   assign line_data_15 = line_data[15];
     |
     |   always @(*) begin
-    |       softmax_read_matrix(line_num, line_data); 
+    |       softmax_read_matrix(en, line_num, line_data); 
     |   end
     |
     |endmodule
