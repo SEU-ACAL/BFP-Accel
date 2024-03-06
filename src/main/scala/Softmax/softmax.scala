@@ -41,18 +41,18 @@ class Counter(t: Int) extends Module {
     io.cnt_num  := Mux(~io.cnt_end, cnt, 0.U)
 }
 
-class DelayRegister(gen: Data, n: Int) extends Module {
-    val io = IO(new Bundle {
-        val data_in = Input(gen)
-        val data_out = Output(gen)
-    })
+// class DelayRegister(gen: Data, n: Int) extends Module {
+//     val io = IO(new Bundle {
+//         val data_in = Input(gen)
+//         val data_out = Output(gen)
+//     })
 
-    val regs = Reg(Vec(n, gen))
-    regs(0) := io.data_in
-    for (i <- 1 until n)
-        regs(i) := regs(i-1)
-    io.data_out := regs(n-1)
-}
+//     val regs = Reg(Vec(n, gen))
+//     regs(0) := io.data_in
+//     for (i <- 1 until n)
+//         regs(i) := regs(i-1)
+//     io.data_out := regs(n-1)
+// }
 
 class SoftMaxDA_Input extends Bundle {
     val data_in = Input(Vec(datain_bandwidth, SInt(bitwidth.W)))
@@ -83,11 +83,11 @@ class softmax extends Module {
     val state      = RegInit(sIdle)
     val next_state = WireInit(sIdle)
 
-    val start = WireInit(false.B)
-    val end   = WireInit(false.B)
+    val start           = WireInit(false.B)
+    val end             = WireInit(false.B)
     val val_buffer_full = WireInit(false.B)
-    start    := da_input.valid 
-    end      := 0.U
+    start              := da_input.valid 
+    end                := 0.U
 
     switch (state) {
         is (sIdle) {
@@ -175,7 +175,7 @@ class softmax extends Module {
     en_line_num :=  ENCounter_inst.io.cnt_num 
 
     output.data_out.valid := false.B
-    output.end := false.B
+    output.end            := false.B
     for(i <- 0 until dataout_bandwidth) { output.data_out.bits(i) := 0.U }
 
     val en_insts = VecInit(Seq.fill(numElements)(Module(new ENUnit(bitwidth)).io))
@@ -220,13 +220,13 @@ class DAUnit(bitwidth: Int) extends Module {
     val delta        = (current_max - previous_max).asUInt
     io.max_reg_o.valid := io.en && (current_max - previous_max > 0.S)   
     io.max_reg_o.bits  := Mux(io.max_reg_o.valid, current_max, previous_max)
-    io.delta_o  := delta
+    io.delta_o         := delta //Mux(io.max_reg_o.valid, delta, 0.U)
     // ================= step 3 max-sub trick (clk)
     val subVec           = io.line_data_i.map(i => i -& io.max_reg_o.bits) // Vec内所有值减去最大值
     val partial_sum      = WireInit(0.S(bitwidth.W));
-    io.partial_sum_o.bits  := subVec.reduce(_ +& _)  // 对Vec内所有值求和
     io.partial_sum_o.valid := io.en
-    io.line_idx_o := Mux(io.en, io.line_idx_i, 0.U)
+    io.partial_sum_o.bits  := Mux(io.partial_sum_o.valid, subVec.reduce(_ +& _), 0.S)  // 对Vec内所有值求和
+    io.line_idx_o          := Mux(io.en, io.line_idx_i, 0.U)
     when (io.partial_sum_o.valid) {
         printf("[DA] line %d, partial_sum_o = %d\n", io.line_idx_o, io.partial_sum_o.bits);
     }

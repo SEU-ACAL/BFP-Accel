@@ -55,6 +55,9 @@ void sim_exit() {
 //     } // pc先走拍到第一条指令执行结束
 // }
 
+extern uint8_t softmax_output[16][16];
+extern uint8_t softmax_input[16][16];
+extern double softmax_ref[16][16];
 //================ main =====================//
 int main(int argc, char *argv[]) {
     sim_init();
@@ -64,4 +67,8 @@ int main(int argc, char *argv[]) {
     sdb_mainloop();
 
     sim_exit();
+
+    softmax(softmax_input); 
+
+    display_result(softmax_output, softmax_ref);
 } 

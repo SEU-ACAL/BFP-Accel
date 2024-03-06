@@ -19,6 +19,9 @@ void tet_exec_once();
 void sdb_set_batch_mode(); 
 
 // ================ SoftMax ===================
+// extern uint8_t softmax_input[16][16];
+void display_result(uint8_t (*dut_matrix)[16], double (*ref_matrix)[16]);
+void softmax(uint8_t (*softmax_matrix)[16]);
 
 
 #endif
