@@ -17,12 +17,12 @@ class tb extends Module {
     softmax.da_input.valid := true.B
     val da_hs = softmax.da_input.valid && softmax.da_input.ready
     for (i <- 0 until 16) {
-        softmax.da_input.bits.data_in(i) := Mux(da_hs, softmax_input_data.io.line_data(i), 0.U)
+        softmax.da_input.bits.data_in(i) := Mux(da_hs, softmax_input_data.io.line_data(i), 0.S)
     }
     softmax.en_input.valid := true.B
     val en_hs = softmax.en_input.valid && softmax.en_input.ready
     for (i <- 0 until 16) {
-        softmax.en_input.bits.data_in(i) := Mux(en_hs, softmax_input_data.io.line_data(i), 0.U)
+        softmax.en_input.bits.data_in(i) := Mux(en_hs, softmax_input_data.io.line_data(i), 0.S)
     }
 }
 

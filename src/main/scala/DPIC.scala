@@ -9,7 +9,7 @@ import define.MACRO._
 class softmax_input_line extends BlackBox with HasBlackBoxInline {
     val io = IO(new Bundle{
         val line_num  = Input(UInt(log2datain_line_num.W)) 
-        val line_data = Output(Vec(datain_bandwidth, UInt(bitwidth.W)))
+        val line_data = Output(Vec(datain_bandwidth, SInt(bitwidth.W)))
     })
     setInline("softmax_input_line.v",
     """
