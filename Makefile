@@ -52,7 +52,7 @@ test:
 
 verilog:
 	$(shell mkdir -p $(BUILD_DIR))
-	mill --jobs ${NUM_JOBs}	-i __.test.runMain Elaborate	PathModule/targetDirectory=$(BUILD_DIR)	-X mverilog
+	mill --jobs ${NUM_JOBs}	-i __.test.runMain Elaborate -td $(BUILD_DIR) -X mverilog
 # mill -i __.test.runMain Elaborate -td $(BUILD_DIR) 
 # -X mverilog 生成verilog取消优化
 

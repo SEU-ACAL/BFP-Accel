@@ -2,9 +2,9 @@
 #define _TET_H_
 
 // DPI-C
-// #include "verilated_dpi.h"
-// #include "Vtb__Dpi.h"
-// #include "svdpi.h"
+#include "verilated_dpi.h"
+#include "Vtb__Dpi.h"
+#include "svdpi.h"
 // verilator
 #include "verilated.h"
 #include "verilated_vcd_c.h"

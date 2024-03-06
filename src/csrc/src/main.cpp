@@ -2,7 +2,7 @@
 #include <utils/macro.h>
 #include <utils/debug.h>
 
-// #define MAX_SIM_TIME 15000000 最大仿真周期
+// #define MAX_SIM_TIME 50 最大仿真周期
 vluint64_t sim_time = 0;
 
 VerilatedContext* contextp = NULL;
