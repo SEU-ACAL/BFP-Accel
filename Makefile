@@ -8,7 +8,7 @@ NUM_JOBs = 16
 
 # ========= verilator ==============
 TOPNAME = tb
-INC_PATH ?= /home/shiroha/Code/ysyx/ysyx-workbench/ml-accelerator/src/csrc/include \
+INC_PATH ?= ${PWD}/src/csrc/include \
 			/usr/lib/llvm-11/include # for disasm 
 
 VERILATOR = verilator
@@ -83,4 +83,4 @@ wave:
 	gtkwave dump.vcd &
 
 
-include ../Makefile
+# include ../Makefile
