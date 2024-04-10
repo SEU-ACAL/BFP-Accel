@@ -10,6 +10,12 @@
 #include "verilated_vcd_c.h"
 #include "Vtb.h"
 
+
+// ================ DataType ====================
+#include <input/input.h>
+#include <utils/display.h>
+
+
 // ================ RISCV CPU ===================
 
 // ================ SDB Config ===================

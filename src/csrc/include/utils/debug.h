@@ -98,7 +98,5 @@
 
 // #define panic(format, ...) Assert(0, format, ## __VA_ARGS__)
 
-// TODO: kilb怎么拿过来？
-
 #endif
 
