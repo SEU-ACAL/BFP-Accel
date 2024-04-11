@@ -58,9 +58,7 @@ void sim_exit() {
 
 extern float softmax_input_float[5][5];
 extern fp16_t softmax_input_fp16[5][5];
-extern uint16_t softmax_input_fp16_sign[5][5];
-extern uint16_t softmax_input_fp16_exp[5][5];
-extern uint16_t softmax_input_fp16_frac[5][5];
+
 //================ main =====================//
 int main(int argc, char *argv[]) {
     sim_init();
@@ -71,13 +69,14 @@ int main(int argc, char *argv[]) {
 
     for (int j = 0; j < 5; j++) {
         for (int k = 0; k < 5; k ++) {
-            // softmax_input_fp16[j][k].sign = softmax_input_fp16_sign[j][k]; 
-            // softmax_input_fp16[j][k].exp  = softmax_input_fp16_exp[j][k]; 
-            // softmax_input_fp16[j][k].frac = softmax_input_fp16_frac[j][k]; 
             softmax_input_fp16[j][k] = float_to_fp16(softmax_input_float[j][k]);
         }
     }
     
+    display_fp16_matrix(softmax_input_fp16, 5, 5);
+
+    share_exp(softmax_input_fp16, softmax_input_fp16);
+
     display_fp16_matrix(softmax_input_fp16, 5, 5);
 
     sdb_mainloop();

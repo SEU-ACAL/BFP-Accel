@@ -97,4 +97,7 @@
 // 自定义宏
 #define MUX(v, p, a, b) v == p ? a : b
 // value, p可能值, 则为a, 否则为b
+#define SWAP(a, b) a ^= b; \
+                b ^= a; \
+                a ^= b; 
 #endif

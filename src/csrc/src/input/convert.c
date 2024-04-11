@@ -12,12 +12,11 @@ fp16_t float_to_fp16(float val) {
     */
     fp16_t result;
     uint32_t raw = *(uint32_t *)&val; // 将float视为32位整数
-    // uint32_t raw = (uint32_t)val;
 
-    result.sign = (raw >> 16) & 0x8000;
+    result.sign = (raw & 0x80000000) >> 31 ;
     result.exp  = ((raw >> 23) & 0xff) - 127 + 15;
-    result.frac =  (raw >> 13) & 0x3ff;
-    result.val  = result.sign |  (result.exp << 10) | result.frac; 
+    result.frac = (raw >> 13) & 0x3ff;
+    // result.val  = (result.sign << 15) |  (result.exp << 10) | result.frac; 
 
     if(raw & 0x1000) {
         result.val += 1;
