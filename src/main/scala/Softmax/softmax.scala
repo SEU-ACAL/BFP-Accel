@@ -13,9 +13,9 @@ class SoftMax_Input extends Bundle {
 
 
 class softmax extends Module {
-    val data_in  = IO(Flipped(Decoupled(new SoftMax_Input)))
+    // val data_in  = IO(Flipped(Decoupled(new SoftMax_Input)))
 
-    val SEFP_Generator = Module(new SEFP_GeneratorUnit(bitwidth)).io
+    // val SEFP_Generator = Module(new SEFP_GeneratorUnit(bitwidth)).io
 
     printf("Hello, start from this\n");
 }

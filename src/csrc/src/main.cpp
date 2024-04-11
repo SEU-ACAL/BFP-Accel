@@ -67,11 +67,14 @@ int main(int argc, char *argv[]) {
 
     init_monitor(argc, argv);
 
+    display_float_matrix(softmax_input_float, 5, 5);
+
     for (int j = 0; j < 5; j++) {
         for (int k = 0; k < 5; k ++) {
-            softmax_input_fp16[j][k].sign = softmax_input_fp16_sign[j][k]; 
-            softmax_input_fp16[j][k].exp  = softmax_input_fp16_exp[j][k]; 
-            softmax_input_fp16[j][k].frac = softmax_input_fp16_frac[j][k]; 
+            // softmax_input_fp16[j][k].sign = softmax_input_fp16_sign[j][k]; 
+            // softmax_input_fp16[j][k].exp  = softmax_input_fp16_exp[j][k]; 
+            // softmax_input_fp16[j][k].frac = softmax_input_fp16_frac[j][k]; 
+            softmax_input_fp16[j][k] = float_to_fp16(softmax_input_float[j][k]);
         }
     }
     

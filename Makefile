@@ -3,8 +3,7 @@ BUILD_DIR = $(abspath ./build)
 export PATH := $(PATH):$(abspath ./utils)
 
 # ARGS
-NUM_JOBs = 16
-
+NUM_JOBs = 256
 
 # ========= verilator ==============
 TOPNAME = tb

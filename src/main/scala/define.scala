@@ -14,5 +14,8 @@ object MACRO {
     val log2bitwidth        = log2Up(bitwidth)
     val exp_bitwidth        = 5
     val frac_bitwidth       = 10
-    // val numElements         = datain_bandwidth
+
+
+    // ITA 
+    val numElements         = datain_bandwidth
 }
