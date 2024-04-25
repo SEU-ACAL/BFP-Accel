@@ -6,6 +6,42 @@ import chisel3.util._
 import define.MACRO._
 
 
+
+class softmax_input_fp16_line extends BlackBox with HasBlackBoxInline {
+    val io = IO(new Bundle{
+        val en        = Input(UInt(1.W)) 
+        val line_num  = Input(UInt(log2datain_line_num.W)) 
+        val line_data = Output(Vec(datain_bandwidth, UInt(bitwidth.W)))
+    })
+    setInline("softmax_input_fp16_line.v",
+    """
+    |import "DPI-C" function void softmax_read_FP16_matrix(input bit en, input int line_num, output shortint line_data[5]);
+    |module softmax_input_fp16_line (
+    |   input        en,
+    |   input  [3:0] line_num,
+    |   output [15:0] line_data_0,
+    |   output [15:0] line_data_1,
+    |   output [15:0] line_data_2,
+    |   output [15:0] line_data_3,
+    |   output [15:0] line_data_4
+    |);
+    |   shortint line_data[5];
+    |
+    |   assign line_data_0  = line_data[ 0];
+    |   assign line_data_1  = line_data[ 1];
+    |   assign line_data_2  = line_data[ 2];
+    |   assign line_data_3  = line_data[ 3];
+    |   assign line_data_4  = line_data[ 4];
+    |
+    |   always @(*) begin
+    |       softmax_read_FP16_matrix(en, line_num, line_data); 
+    |   end
+    |
+    |endmodule
+    """.stripMargin)
+}
+
+
 class softmax_input_line extends BlackBox with HasBlackBoxInline {
     val io = IO(new Bundle{
         val en        = Input(UInt(1.W)) 

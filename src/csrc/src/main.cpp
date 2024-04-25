@@ -75,13 +75,13 @@ int main(int argc, char *argv[]) {
     
     display_fp16_matrix(softmax_input_fp16, 5, 5);
 
-    share_exp(softmax_input_fp16, softmax_input_fp16);
-
-    display_fp16_matrix(softmax_input_fp16, 5, 5);
-
     sdb_mainloop();
 
     sim_exit();
+
+    share_exp(softmax_input_fp16, softmax_input_fp16);
+
+    display_fp16_matrix(softmax_input_fp16, 5, 5);
 
     // softmax(softmax_input); 
 
