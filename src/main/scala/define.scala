@@ -5,18 +5,36 @@ import chisel3.util._
 import chisel3.stage._
 
 
-object MACRO {
-    val datain_bandwidth    = 5
+object MACRO { 
+    val datain_bandwidth    = 8
+    val log2datain_bandwidth = log2Up(datain_bandwidth)
     val datain_line_num     = 5
     val log2datain_line_num = log2Up(datain_line_num)
-    val dataout_bandwidth   = 16
+    val dataout_bandwidth   = 16    
     val bitwidth            = 16
     val log2bitwidth        = log2Up(bitwidth)
     val exp_bitwidth        = 5
     val frac_bitwidth       = 10
+    val expvalue_bitwidth   = 16
 
+    val partSet_size       = 256 // 有多少个数
+    val fullSet_size       = partSet_size * 17 // 除去underflow和overflower一共17个set可用
 
-    // ITA 
+    val lut_width           = 8
+    val lut_depth           = partSet_size / lut_width
+    val lut_bitwidth        = 16
+    val lut_set             = 4
+
+    val dram_width           = lut_width
+    val dram_depth           = fullSet_size / lut_width  
+    val dram_bitwidth        = 16
+
+    val dma_burst_len        = dram_depth / 2 // dual port
+    val bus_width            = lut_width * lut_bitwidth
+
+    val underflow_threshold = 11     // 0~11
+    val overflow_threshold  = 28    // 28~30
+
     val numElements         = datain_bandwidth
 }
 
@@ -73,4 +91,17 @@ object FSM {
     val sIdle = 0.U   
     val sRun  = 1.U
     val sDone = 2.U   // sIdle 00 sRun 01 sDone 10 
+}
+
+object function {
+    def hs_uint_dff(valid: Bool, ready: Bool, DataWidth: UInt, data_default: UInt, data_i: UInt): UInt = {
+        val data_o = RegInit(data_default.U(DataWidth.W))
+        data_o := Mux(valid && ready, data_i, data_o)
+        data_o
+    }
+    def hs_bool_dff(valid: Bool, ready: Bool, bool_default: Bool, bool_i: Bool): UInt = {
+        val data_o = RegInit(bool_default.B)
+        data_o := Mux(valid && ready, data_i, data_o)
+        data_o
+    }
 }
