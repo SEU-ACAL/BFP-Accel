@@ -20,18 +20,18 @@ void display_result(uint8_t (*dut_matrix)[16], double (*ref_matrix)[16]) {
     }
 }
 
-void share_exp(fp16_t (*matrix_in)[5], fp16_t (*matrix_out)[5]) {
+void share_exp(fp16_t (*matrix_in)[datain_bandwidth], fp16_t (*matrix_out)[datain_bandwidth]) {
     printf("C do share exp operation:\n");
     int max = 0;
-    for (int j = 0; j < 5; j++) {
-        for (int k = 0; k < 5; k++) {
+    for (int j = 0; j < datain_lines; j++) {
+        for (int k = 0; k < datain_bandwidth; k++) {
             if (matrix_in[j][k].exp > max) { max = matrix_in[j][k].exp;}
         } // 找最大值
         printf("max number in this group is %d\n", max);    
         
         int shift = 0;
         printf("share exp this line:");    
-        for (int k = 0; k < 5; k++) {    
+        for (int k = 0; k < datain_bandwidth; k++) {    
             shift = (max == matrix_in[j][k].exp) ? 0 : (max - matrix_in[j][k].exp);
             matrix_out[j][k].exp  = (max == matrix_in[j][k].exp) ? max : (max - 1);
             matrix_out[j][k].frac = (matrix_in[j][k].exp >= 1) ?  ((matrix_out[j][k].frac | 0x400) >> shift) : ((matrix_out[j][k].frac) >> shift); 

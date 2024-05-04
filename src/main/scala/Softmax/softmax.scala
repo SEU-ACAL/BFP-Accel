@@ -85,7 +85,7 @@ class softmax extends Module {
     
     data_in.ready           := Max_inst.maxu_i.ready
     // ====================== load DRAM ==========================
-    loadMemoryFromFileInline(DRAM_inst.mem, "./fp16_input.hex", MemoryLoadFileType.Hex); 
+    loadMemoryFromFileInline(DRAM_inst.mem, "./src/main/scala/Softmax/lut_data/lut_data.hex", MemoryLoadFileType.Hex); 
 
     // ======================= 一次对指 ===========================
     Max_inst.maxu_i                  <>  data_in
@@ -95,7 +95,7 @@ class softmax extends Module {
 
 
     when (Shift_inst.shiftu_subu_o.valid) {
-        printf("step 1 一次对指[");
+        printf("step 1 share exp [");
         for (i <- 0 until cycle_bandwidth) { printf("(%d) ", Shift_inst.shiftu_subu_o.bits.frac_vec(i));}
         printf("]\n");
     }

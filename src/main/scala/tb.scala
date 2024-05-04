@@ -34,7 +34,7 @@ class tb extends Module {
     data_in_hs      := softmax.data_in.valid && softmax_in.ready
     data_out_hs     := softmax.data_out.valid && softmax_out.ready
     
-    val line_num = RegInit(0.U(log2Up(datain_line_num).W))
+    val line_num = RegInit(0.U(log2Up(datain_lines).W))
     softmax_input_fp16.en       := true.B
     softmax_input_fp16.line_num := line_num
     

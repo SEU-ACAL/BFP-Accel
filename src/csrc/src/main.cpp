@@ -56,8 +56,8 @@ void sim_exit() {
 // }
 
 
-extern float softmax_input_float[5][5];
-extern fp16_t softmax_input_fp16[5][5];
+extern float softmax_input_float[datain_lines][datain_bandwidth];
+extern fp16_t softmax_input_fp16[datain_lines][datain_bandwidth];
 
 //================ main =====================//
 int main(int argc, char *argv[]) {
@@ -65,15 +65,15 @@ int main(int argc, char *argv[]) {
 
     init_monitor(argc, argv);
 
-    display_float_matrix(softmax_input_float, 5, 5);
+    display_float_matrix(softmax_input_float, datain_lines, datain_bandwidth);
 
-    for (int j = 0; j < 5; j++) {
-        for (int k = 0; k < 5; k ++) {
+    for (int j = 0; j < datain_lines; j++) {
+        for (int k = 0; k < datain_bandwidth; k++) {
             softmax_input_fp16[j][k] = float_to_fp16(softmax_input_float[j][k]);
         }
     }
     
-    display_fp16_matrix(softmax_input_fp16, 5, 5);
+    display_fp16_matrix(softmax_input_fp16, datain_lines, datain_bandwidth);
 
     sdb_mainloop();
 
@@ -81,9 +81,7 @@ int main(int argc, char *argv[]) {
 
     share_exp(softmax_input_fp16, softmax_input_fp16);
 
-    display_fp16_matrix(softmax_input_fp16, 5, 5);
+    display_fp16_matrix(softmax_input_fp16, datain_lines, datain_bandwidth);
 
-    // softmax(softmax_input); 
 
-    // display_result(softmax_output, softmax_ref);
 } 

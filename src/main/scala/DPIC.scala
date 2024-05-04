@@ -10,12 +10,12 @@ import define.MACRO._
 class softmax_input_fp16_line extends BlackBox with HasBlackBoxInline {
     val io = IO(new Bundle{
         val en        = Input(UInt(1.W)) 
-        val line_num  = Input(UInt(log2Up(datain_line_num).W)) 
+        val line_num  = Input(UInt(log2Up(datain_lines).W)) 
         val line_data = Output(Vec(datain_bandwidth, UInt(bitwidth.W)))
     })
     setInline("softmax_input_fp16_line.v",
     """
-    |import "DPI-C" function void softmax_read_FP16_matrix(input bit en, input int line_num, output shortint line_data[5]);
+    |import "DPI-C" function void softmax_read_FP16_matrix(input bit en, input int line_num, output shortint line_data[8]);
     |module softmax_input_fp16_line (
     |   input        en,
     |   input  [3:0] line_num,
@@ -23,15 +23,21 @@ class softmax_input_fp16_line extends BlackBox with HasBlackBoxInline {
     |   output [15:0] line_data_1,
     |   output [15:0] line_data_2,
     |   output [15:0] line_data_3,
-    |   output [15:0] line_data_4
+    |   output [15:0] line_data_4,
+    |   output [15:0] line_data_5,
+    |   output [15:0] line_data_6,
+    |   output [15:0] line_data_7
     |);
-    |   shortint line_data[5];
+    |   shortint line_data[8];
     |
     |   assign line_data_0  = line_data[ 0];
     |   assign line_data_1  = line_data[ 1];
     |   assign line_data_2  = line_data[ 2];
     |   assign line_data_3  = line_data[ 3];
     |   assign line_data_4  = line_data[ 4];
+    |   assign line_data_5  = line_data[ 5];
+    |   assign line_data_6  = line_data[ 6];
+    |   assign line_data_7  = line_data[ 7];
     |
     |   always @(*) begin
     |       softmax_read_FP16_matrix(en, line_num, line_data); 
@@ -45,7 +51,7 @@ class softmax_input_fp16_line extends BlackBox with HasBlackBoxInline {
 class softmax_input_line extends BlackBox with HasBlackBoxInline {
     val io = IO(new Bundle{
         val en        = Input(UInt(1.W)) 
-        val line_num  = Input(UInt(log2Up(datain_line_num).W)) 
+        val line_num  = Input(UInt(log2Up(datain_lines).W)) 
         val line_data = Output(Vec(datain_bandwidth, SInt(bitwidth.W)))
     })
     setInline("softmax_input_line.v",
@@ -101,7 +107,7 @@ class softmax_input_line extends BlackBox with HasBlackBoxInline {
 class softmax_output_trace extends BlackBox with HasBlackBoxInline {
     val io = IO(new Bundle{
         val en        = Input(UInt(1.W)) 
-        val line_num  = Input(UInt(log2Up(datain_line_num).W)) 
+        val line_num  = Input(UInt(log2Up(datain_lines).W)) 
         val line_data = Input(Vec(datain_bandwidth, UInt(bitwidth.W)))
     })
     setInline("softmax_output_trace.v",

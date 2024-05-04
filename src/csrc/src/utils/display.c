@@ -1,7 +1,7 @@
 #include "tet.h"
 #include <stdio.h>
 
-void display_float_matrix(float (*float_matrix)[5], int row, int col) {
+void display_float_matrix(float (*float_matrix)[datain_bandwidth], int row, int col) {
     printf("[(");
     for (int j = 0; j < row; j++) {
         for (int k = 0; k < col; k++) {
@@ -12,7 +12,7 @@ void display_float_matrix(float (*float_matrix)[5], int row, int col) {
     printf("]\n");
 }
 
-void display_fp16_matrix(fp16_t (*fp16_matrix)[5], int row, int col) {
+void display_fp16_matrix(fp16_t (*fp16_matrix)[datain_bandwidth], int row, int col) {
     printf("[(");
     for (int j = 0; j < row; j++) {
         for (int k = 0; k < col; k++) {
