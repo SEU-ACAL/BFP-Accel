@@ -125,7 +125,7 @@
 //     // ================ step 0 init counter 
 //     val DACounter_inst  = Module(new Counter(t = datain_line_num+1))
 //     DACounter_inst.io.en := Mux(state === sRunDA, true.B, false.B)
-//     val da_line_num = RegInit(0.U(log2datain_line_num.W)) 
+//     val da_line_num = RegInit(0.U(log2Up(datain_line_num).W)) 
 //     da_line_num :=  DACounter_inst.io.cnt_num 
 
 //     val DA_inst = Module(new DAUnit(bitwidth)).io
@@ -155,7 +155,7 @@
 
 
 //     // ================== DI stage =========================================== // 
-//     val di_line_num = RegInit(0.U(log2datain_line_num.W)) 
+//     val di_line_num = RegInit(0.U(log2Up(datain_line_num).W)) 
 //     di_line_num :=  DA_inst.line_idx_o
     
 //     val DI_inst = Module(new DIUnit(bitwidth)).io
@@ -171,7 +171,7 @@
 //     // ================== EN stage =========================================== // 
 //     val ENCounter_inst  = Module(new Counter(t = datain_line_num+1))
 //     ENCounter_inst.io.en := Mux(state === sRunEN, true.B, false.B)
-//     val en_line_num = RegInit(0.U(log2datain_line_num.W)) 
+//     val en_line_num = RegInit(0.U(log2Up(datain_line_num).W)) 
 //     en_line_num :=  ENCounter_inst.io.cnt_num 
 
 //     output.data_out.valid := false.B
@@ -202,9 +202,9 @@
 //     val io = IO(new Bundle {
 //         val en             = Input(Bool())
 //         val line_data_i    = Input(Vec(dataout_bandwidth, SInt(bitwidth.W)))
-//         val line_idx_i     = Input(UInt(log2datain_line_num.W))
+//         val line_idx_i     = Input(UInt(log2Up(datain_line_num).W))
 //         val max_reg_i      = Input(SInt(bitwidth.W))
-//         val line_idx_o     = Output(UInt(log2datain_line_num.W))
+//         val line_idx_o     = Output(UInt(log2Up(datain_line_num).W))
 //         val max_reg_o      = Output(Valid(SInt(bitwidth.W)))
 //         val delta_o        = Output(UInt(bitwidth.W))
 //         val partial_sum_o  = Output(Valid(SInt(bitwidth.W)))
@@ -236,8 +236,8 @@
 //     val io = IO(new Bundle {
 //         val en          = Input(Bool())
 //         val ps_i        = Input(SInt((bitwidth*2).W))
-//         val line_idx_i  = Input(UInt(log2datain_line_num.W))
-//         val line_idx_o  = Output(UInt(log2datain_line_num.W))
+//         val line_idx_i  = Input(UInt(log2Up(datain_line_num).W))
+//         val line_idx_o  = Output(UInt(log2Up(datain_line_num).W))
 //         val inv_o       = Output(Valid(SInt((bitwidth*2).W)))
 //     })
 
@@ -255,8 +255,8 @@
 //         val max_i      = Input(SInt(bitwidth.W))
 //         val inv_i      = Input(SInt((bitwidth*2).W))
 //         val x_i        = Input(SInt(bitwidth.W))
-//         val line_idx_i = Input(UInt(log2datain_line_num.W))
-//         val line_idx_o = Output(UInt(log2datain_line_num.W))
+//         val line_idx_i = Input(UInt(log2Up(datain_line_num).W))
+//         val line_idx_o = Output(UInt(log2Up(datain_line_num).W))
 //         val softmax_o  = Output(Valid(UInt(bitwidth.W)))
 //     })
 //     // calculate x_q
@@ -268,7 +268,7 @@
 //         // calculate x_q
 //         x_q := (io.x_i - io.max_i).asUInt
 //         // calculation shift
-//         shift := x_q >> (bitwidth - log2bitwidth)
+//         shift := x_q >> (bitwidth - log2Up(bitwidth))
 //         // 对inv进行右移shift位
 //         io.softmax_o.bits  := (io.inv_i >> shift)(bitwidth-1, 0)
 //         io.softmax_o.valid := true.B

@@ -15,19 +15,18 @@ import lut._
 import maxu._
 import shiftu._
 import subu._
+import DMA._
+import DRAM._
+import pipeline._
 
 import chisel3.util.experimental.loadMemoryFromFileInline
 import firrtl.annotations.MemoryLoadFileType
 
 
 
-class SoftMax_Input extends Bundle {
-    val raw_data = Vec(datain_bandwidth, UInt(bitwidth.W))
-}
+class SoftMax_Input extends Bundle { val raw_data = Vec(datain_bandwidth, UInt(bitwidth.W)) }
 
-class SoftMax_Output extends Bundle {
-    val res_data = Vec(datain_bandwidth, UInt(bitwidth.W))
-}
+class SoftMax_Output extends Bundle { val res_data = Vec(datain_bandwidth, UInt(bitwidth.W)) }
 
 class softmax extends Module {
     val data_in  = IO(Flipped(Decoupled(new SoftMax_Input)))
@@ -55,62 +54,92 @@ class softmax extends Module {
         frac_vec(i) := Mux(data_in_hs, data_in.bits.raw_data(i)(bitwidth - 7, 0),            frac_vec(i))
     }
 
-    val Max_inst    = Module(new MaxComparator(bitwidth = exp_bitwidth, numElements = datain_bandwidth)).io 
-    val Shift_inst1 = Module(new frac_shift1).io 
-    val LDU_inst    = Module(new load_exp(bitwidth = exp_bitwidth, numElements = datain_bandwidth)).io 
-    val Sub_inst    = Module(new sub_max(bitwidth = exp_bitwidth, numElements = datain_bandwidth)).io 
+    val Max_inst    = Module(new MaxComparator(numElements = datain_bandwidth)).io 
+    val Shift_inst  = Module(new frac_shift(bandwidth = cycle_bandwidth)).io 
+    val LDU_inst    = Module(new load_exp(bitwidth = exp_bitwidth, bandwidth = cycle_bandwidth)).io 
+    val Sub_inst    = Module(new sub_max(bitwidth = exp_bitwidth, bandwidth = cycle_bandwidth)).io 
     val LUT_inst    = Module(new ExpLUT(depth = lut_depth, width = lut_width, set = lut_set)).io 
-    val EXP_inst    = Module(new get_exp(bitwidth = exp_bitwidth, numElements = datain_bandwidth)).io 
+    val EXP_inst    = Module(new get_exp(bitwidth = exp_bitwidth, bandwidth = cycle_bandwidth)).io 
     // val Shift_inst2 = Module(new frac_shift2).io 
-    val ADD_inst    = Module(new adder_tree(bitwidth = exp_bitwidth, numElements = datain_bandwidth)).io 
-    val DIV_inst    = Module(new div(bitwidth = exp_bitwidth, numElements = datain_bandwidth)).io 
+    val ADD_inst    = Module(new adder_tree(bitwidth = exp_bitwidth, bandwidth = cycle_bandwidth)).io 
+    val DIV_inst    = Module(new div(bitwidth = exp_bitwidth, bandwidth = cycle_bandwidth)).io 
     val DMA_inst    = Module(new DMA).io 
     val DRAM_inst   = Module(new DualPortDRAM(depth = dram_depth, width = bus_width)) 
+
+
+    val maxu_shiftu_inst = Module(new maxu_shiftu   )// .io 
+    val maxu_ldu_inst    = Module(new maxu_ldu      )// .io 
+    val shiftu_subu_inst = Module(new shiftu_subu   )// .io 
+    val subu_expu_inst   = Module(new subu_expu     )// .io 
+    val ldu_lut_inst     = Module(new ldu_lut       )// .io 
+    val lut_ldu_inst     = Module(new lut_ldu       )// .io 
+    val ldu_expu_inst    = Module(new ldu_expu      )// .io 
+    val expu_lut_inst    = Module(new expu_lut      )// .io 
+    val lut_expu_inst    = Module(new lut_expu      )// .io 
+    val lut_dma_inst     = Module(new lut_dma_regs  )// .io 
+    val dma_lut_inst     = Module(new dma_lut_regs  )// .io 
+    val dma_dram_inst    = Module(new dma_dram_regs )// .io
+    val dram_dma_inst    = Module(new dram_dma_regs )// .io
+    val expu_addu_inst   = Module(new expu_addu     )// .io 
+    val addu_divu_inst   = Module(new addu_divu     )// .io 
     
     data_in.ready           := Max_inst.maxu_i.ready
     // ====================== load DRAM ==========================
     loadMemoryFromFileInline(DRAM_inst.mem, "./fp16_input.hex", MemoryLoadFileType.Hex); 
 
     // ======================= 一次对指 ===========================
-    Max_inst.maxu_i.valid   := data_in.valid && data_in.ready
-    for (i <- 0 until datain_bandwidth) { 
-        Max_inst.maxu_i.bits.data(i)  := data_in.bits.raw_data(i)(bitwidth - 2, bitwidth - 6)
-        Max_inst.maxu_i.bits.sign(i)  := data_in.bits.raw_data(i)(bitwidth - 1)
-    }
-    Shift_inst1.maxu_shiftu_i <> Max_inst.maxu_shiftu_o  
+    Max_inst.maxu_i                  <>  data_in
 
-    when (Shift_inst1.shiftu_subu_o.valid) {
+    Max_inst.maxu_shiftu_o           <> maxu_shiftu_inst.maxu_maxshift_i
+    Shift_inst.maxu_shiftu_i         <> maxu_shiftu_inst.maxshift_shiftu_o
+
+
+    when (Shift_inst.shiftu_subu_o.valid) {
         printf("step 1 一次对指[");
-        for (i <- 0 until datain_bandwidth) { printf("(%d) ", Shift_inst1.shiftu_subu_o.bits.frac(i));}
+        for (i <- 0 until cycle_bandwidth) { printf("(%d) ", Shift_inst.shiftu_subu_o.bits.frac_vec(i));}
         printf("]\n");
     }
 
     // ======================= 减最大值 ===========================
-    // Sub_inst.max_subu_i    <> Max_inst.max_subu_o
-    Sub_inst.shift_subu_i  <> Shift_inst1.shiftu_subu_o 
+    Shift_inst.shiftu_subu_o    <> shiftu_subu_inst.shift_shiftsub_i 
+    Sub_inst.shift_subu_i       <> shiftu_subu_inst.shiftsub_sub_o
 
 
     // ======================= 预加载表 ===========================
     // maxu to ldu
-    LDU_inst.maxu_ldu_i     <> Max_inst.maxu_ldu_o     
-    // lut and ldu
-    LDU_inst.lut_ldu_i      <> LUT_inst.lut_ldu_o  
-    LUT_inst.ldu_lut_i      <> LDU_inst.ldu_lut_o 
-    // lut and expu
-    EXP_inst.ldu_expu_i     <> LDU_inst.ldu_expu_o 
-    // lut and dma
-    LUT_inst.dma_lut_i      <> DMA_inst.dma_lut_o
-    DMA_inst.lut_dma_i      <> LUT_inst.lut_dma_o
-    // dram and dma
-    DRAM_inst.io.dma_dram_i <> DMA_inst.dma_dram_o  
-    DMA_inst.dram_dma_i     <> DRAM_inst.io.dram_dma_o 
+    Max_inst.maxu_ldu_o             <> maxu_ldu_inst.maxu_maxld_i
+    LDU_inst.maxu_ldu_i             <> maxu_ldu_inst.maxld_ldu_o
+    // ldu to lut 
+    LUT_inst.lut_ldu_o              <> lut_ldu_inst.lut_lutld_i 
+    LDU_inst.lut_ldu_i              <> lut_ldu_inst.lutld_ldu_o  
+    // lut to dma
+    LUT_inst.lut_dma_o              <> lut_dma_inst.lut_lutdma_i
+    DMA_inst.lut_dma_i              <> lut_dma_inst.lutdma_dma_o
+    // dma to lut
+    DMA_inst.dma_lut_o              <> dma_lut_inst.dma_dmalut_i
+    LUT_inst.dma_lut_i              <> dma_lut_inst.dmalut_lut_o
+    // dma to dram
+    DMA_inst.dma_dram_o             <> dma_dram_inst.dma_dmadram_i 
+    DRAM_inst.io.dma_dram_i         <> dma_dram_inst.dmadram_dram_o
+    // dram to dma
+    DRAM_inst.io.dram_dma_o         <> dram_dma_inst.dram_dramdma_i
+    DMA_inst.dram_dma_i             <> dram_dma_inst.dramdma_dma_o 
+    // lut to ldu
+    LDU_inst.ldu_lut_o              <> ldu_lut_inst.ldu_ldlut_i    
+    LUT_inst.ldu_lut_i              <> ldu_lut_inst.ldlut_lut_o 
+    // ldu to expu
+    LDU_inst.ldu_expu_o             <> ldu_expu_inst.ldu_ldexp_i 
+    EXP_inst.ldu_expu_i             <> ldu_expu_inst.lutexp_exp_o
 
 
     // ======================= 查表 ===========================
-    Sub_inst.subu_expu_o   <> EXP_inst.sub_expu_i   
+    Sub_inst.subu_expu_o   <> subu_expu_inst.subu_subexp_i
+    EXP_inst.sub_expu_i    <> subu_expu_inst.subexp_expu_o   
 
-    LUT_inst.expu_lut_i    <> EXP_inst.expu_lut_o   
-    EXP_inst.lut_expu_i    <> LUT_inst.lut_expu_o
+    EXP_inst.expu_lut_o    <> expu_lut_inst.expu_explut_i
+    LUT_inst.expu_lut_i    <> expu_lut_inst.explut_lut_o
+    LUT_inst.lut_expu_o    <> lut_expu_inst.lut_lutexp_i
+    EXP_inst.lut_expu_i    <> lut_expu_inst.lutexp_exp_o
 
 
 
@@ -118,21 +147,25 @@ class softmax extends Module {
     // ======================= 二次对指 ===========================
     // Shift_inst2.expu_shiftu_i <> EXP_inst.expu_shiftu_o
     // ======================= 求分母 ===========================    
-    ADD_inst.expu_addu_i     <> EXP_inst.expu_addu_o
+    EXP_inst.expu_addu_o     <> expu_addu_inst.expu_expadd_i
+    ADD_inst.expu_addu_i     <> expu_addu_inst.expadd_addu_o
 
 
 
     
     // ======================= 除法 ===========================
-    DIV_inst.addu_divu_i   <> ADD_inst.addu_divu_o
+    ADD_inst.addu_divu_o    <> addu_divu_inst.addu_adddiv_i
+    DIV_inst.addu_divu_i    <> addu_divu_inst.adddiv_divu_o
 
      
 
-
     // ==================== Output ! =========================
     run_done                 := DIV_inst.divu_o.valid
-    data_out.valid           := DIV_inst.divu_o.valid
-    data_out.bits.res_data   := DIV_inst.divu_o.bits.result
+    // data_out.valid           := DIV_inst.divu_o.valid
+    // data_out.bits.res_data   := DIV_inst.divu_o.bits.result
+
+    data_out                <>  DIV_inst.divu_o
+
 }
 
 

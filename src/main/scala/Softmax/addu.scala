@@ -7,6 +7,9 @@ import chisel3.stage._
 import define.MACRO._
 import define.FSM._
 
+import pipeline._
+
+
 // object WallceTree_generator {
 //     def addOneColumn(col: Seq[Bool], cin: Seq[Bool]):(Seq[Bool], Seq[Bool], Seq[Bool]) = {
 //         var sum = Seq[Bool]()
@@ -83,47 +86,38 @@ import define.FSM._
 
 
 
-class exp_adder_input extends Bundle {   
-    val frac    = Vec(datain_bandwidth, UInt(frac_bitwidth.W))
-}
-class adder_div_output extends Bundle { 
-    val sum  = UInt((frac_bitwidth*2).W)
-    val frac = Vec(datain_bandwidth, UInt(frac_bitwidth.W))
-}
-class adder_tree (val bitwidth: Int, val numElements: Int) extends Module {
+
+class adder_tree (val bitwidth: Int, val bandwidth: Int) extends Module {
     val io = IO(new Bundle {
-        val expu_addu_i  = Flipped(Decoupled(new exp_adder_input))
-        val addu_divu_o  = Decoupled(new adder_div_output)
+        val expu_addu_i  = Flipped(Decoupled(new exp_add))
+        val addu_divu_o  = Decoupled(new add_div)
     })
 
-    val is_end         = RegInit(false.B)
+    val AddDone         = RegInit(false.B)
     // ======================= FSM ==========================
-    val state       = WireInit(sIdle)
+    val state            = WireInit(sIdle)
     val expu_addu_i_hs   = io.expu_addu_i.ready && io.expu_addu_i.valid
     val addu_divu_o_hs   = io.addu_divu_o.ready && io.addu_divu_o.valid
-    state := fsm(expu_addu_i_hs, is_end, addu_divu_o_hs)
-    // ======================================================
+    state := fsm(expu_addu_i_hs, AddDone, addu_divu_o_hs)
     io.expu_addu_i.ready := state === sIdle
-
-    val frac_vec = RegInit(VecInit(Seq.fill(datain_bandwidth)(0.U((frac_bitwidth).W))))
-    frac_vec := Mux(expu_addu_i_hs, io.expu_addu_i.bits.frac, frac_vec)
-    
-    val sum         = RegInit(0.U((frac_bitwidth*2).W))
+    // ======================================================
+    val sum              = RegInit(0.U((frac_bitwidth*2).W))
 
     when (state === sRun) {
-        sum                      := frac_vec(0) + frac_vec(1) + frac_vec(2) + frac_vec(3) + frac_vec(4) + frac_vec(5) + frac_vec(6) + frac_vec(7)   
-        is_end                   := true.B
-        io.addu_divu_o.valid     := false.B 
-        io.addu_divu_o.bits.frac := VecInit(Seq.fill(datain_bandwidth)(0.U(frac_bitwidth.W)))
+        sum                          := io.expu_addu_i.bits.frac_vec(0) + io.expu_addu_i.bits.frac_vec(1) + io.expu_addu_i.bits.frac_vec(2) + io.expu_addu_i.bits.frac_vec(3) + 
+                                        io.expu_addu_i.bits.frac_vec(4) + io.expu_addu_i.bits.frac_vec(5) + io.expu_addu_i.bits.frac_vec(6) + io.expu_addu_i.bits.frac_vec(7)   
+        AddDone                      := true.B
+        io.addu_divu_o.valid         := false.B 
+        io.addu_divu_o.bits.sum      := 0.U
+        io.addu_divu_o.bits.frac_vec := VecInit(Seq.fill(datain_bandwidth)(0.U(frac_bitwidth.W)))
     }.elsewhen (state === sDone) {
-        io.addu_divu_o.valid     := true.B 
-        io.addu_divu_o.bits.frac := frac_vec
-        io.addu_divu_o.bits.sum  := sum
+        io.addu_divu_o.valid         := true.B 
+        io.addu_divu_o.bits.sum      := sum
+        io.addu_divu_o.bits.frac_vec := io.expu_addu_i.bits.frac_vec
     }.otherwise {
-        io.addu_divu_o.valid     := false.B 
-        io.addu_divu_o.bits.frac := VecInit(Seq.fill(datain_bandwidth)(0.U(frac_bitwidth.W)))
-        io.addu_divu_o.bits.sum  := 0.U
-        frac_vec        := VecInit(Seq.fill(datain_bandwidth)(0.U(frac_bitwidth.W)))        
+        io.addu_divu_o.valid         := false.B 
+        io.addu_divu_o.bits.sum      := 0.U
+        io.addu_divu_o.bits.frac_vec := VecInit(Seq.fill(datain_bandwidth)(0.U(frac_bitwidth.W)))
     }
 
 }
