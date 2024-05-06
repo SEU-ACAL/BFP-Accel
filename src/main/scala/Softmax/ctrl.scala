@@ -11,11 +11,13 @@ class CTRL extends Module {
     val io = IO(new Bundle {
         val ldu_ctrl_i      = Input(new Bundle{ val ldu_busy  = Bool()})
         val ctrl_maxshift_o = Output(new ctrl_maxshift)
+        val ctrl_shiftsub_o = Output(new ctrl_shiftsub)
     })
     
 
 
     io.ctrl_maxshift_o.stall_en := io.ldu_ctrl_i.ldu_busy
+    io.ctrl_shiftsub_o.stall_en := io.ldu_ctrl_i.ldu_busy
 
     // // 给事件进行优先编码
     // val event_code = PriorityEncoder(Cat(load_data_hit, icache_busy, dcache_busy, alu_busy, jump, NOEVENT)) // 从低到高输出第一个有1的位数 0->NOEVENT

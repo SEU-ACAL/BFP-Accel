@@ -14,6 +14,8 @@ object MACRO {
     val exp_bitwidth        = 5
     val frac_bitwidth       = 10
     val expvalue_bitwidth   = 16
+    
+    val lutidx_bitwidth    = 8
 
     val partSet_size       = 256 // 有多少个数
     val fullSet_size       = partSet_size * 17 // 除去underflow和overflower一共17个set可用

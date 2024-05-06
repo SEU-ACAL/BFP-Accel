@@ -29,13 +29,15 @@ class sub_max(val bitwidth: Int, val bandwidth: Int) extends Module {
     // ======================================================
 
     val sub_frac_vec = RegInit(VecInit(Seq.fill(bandwidth)(0.U((frac_bitwidth).W))))
-    val max_sign     = io.shift_subu_i.bits.sign_vec(io.shift_subu_i.bits.idx)
-    val max_frac     = io.shift_subu_i.bits.frac_vec(io.shift_subu_i.bits.idx)
+    val max_sign     = WireInit(0.U(1.W))
+    val max_frac     = WireInit(0.U((frac_bitwidth).W))
+    max_sign     := io.shift_subu_i.bits.sign_vec(io.shift_subu_i.bits.idx)
+    max_frac     := io.shift_subu_i.bits.frac_vec(io.shift_subu_i.bits.idx)
 
     when (state === sRun) {
         for (i <- 0 until bandwidth) {
-            sub_frac_vec(i)          := Mux((io.shift_subu_i.bits.sign_vec(i) === 1.U & max_sign === 1.U), max_frac - io.shift_subu_i.bits.frac_vec(i),
-                                            Mux((io.shift_subu_i.bits.sign_vec(i) === 1.U & max_sign === 0.U), io.shift_subu_i.bits.frac_vec(i) - max_frac, 
+            sub_frac_vec(i)          := Mux((io.shift_subu_i.bits.sign_vec(i) === 0.U & max_sign === 0.U), max_frac - io.shift_subu_i.bits.frac_vec(i),
+                                            Mux((io.shift_subu_i.bits.sign_vec(i) === 1.U & max_sign === 1.U), io.shift_subu_i.bits.frac_vec(i) - max_frac, 
                                             Mux((io.shift_subu_i.bits.sign_vec(i) === 1.U) & (max_sign === 0.U), io.shift_subu_i.bits.frac_vec(i) + max_frac, 0.U))) // 最终输出的sign都是-1所以此处忽略 
             SubDone                  := Mux(i.U === (bandwidth-1).U, true.B, false.B)
         }

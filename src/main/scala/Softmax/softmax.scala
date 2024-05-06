@@ -106,6 +106,11 @@ class softmax extends Module {
     Shift_inst.shiftu_subu_o    <> shiftu_subu_inst.shift_shiftsub_i 
     Sub_inst.shift_subu_i       <> shiftu_subu_inst.shiftsub_sub_o
 
+    when (Shift_inst.shiftu_subu_o.valid) {
+        printf("step 2 Minus the max value [");
+        for (i <- 0 until cycle_bandwidth) { printf("(%d) ", Sub_inst.subu_expu_o.bits.frac_vec(i));}
+        printf("]\n");
+    }
 
     // ======================= 预加载表 ===========================
     // maxu to ldu
@@ -143,6 +148,11 @@ class softmax extends Module {
     LUT_inst.lut_expu_o    <> lut_expu_inst.lut_lutexp_i
     EXP_inst.lut_expu_i    <> lut_expu_inst.lutexp_exp_o
 
+    when (Shift_inst.shiftu_subu_o.valid) {
+        printf("step 3 find data in lut [");
+        for (i <- 0 until cycle_bandwidth) { printf("(%d) ", EXP_inst.expu_addu_o.bits.frac_vec(i));}
+        printf("]\n");
+    }
 
 
 
@@ -152,7 +162,9 @@ class softmax extends Module {
     EXP_inst.expu_addu_o     <> expu_addu_inst.expu_expadd_i
     ADD_inst.expu_addu_i     <> expu_addu_inst.expadd_addu_o
 
-
+    when (ADD_inst.addu_divu_o.valid) {
+        printf("step 4 caculate sum = (%d)\n", ADD_inst.addu_divu_o.bits.sum);
+    }
 
     
     // ======================= 除法 ===========================
@@ -173,6 +185,7 @@ class softmax extends Module {
 
     CTRL_inst.ldu_ctrl_i             <> LDU_inst.ldu_ctrl_o
     maxu_shiftu_inst.ctrl_maxshift_i <> CTRL_inst.ctrl_maxshift_o
+    shiftu_subu_inst.ctrl_shiftsub_i <> CTRL_inst.ctrl_shiftsub_o
 }
 
 

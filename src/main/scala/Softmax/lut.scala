@@ -56,11 +56,6 @@ class ExpLUT(depth: Int, width: Int, set: Int) extends Module {
     // ===================== Read LUT =============
      
     when (rd_state === sRun) {
-        io.lut_expu_o.valid      := true.B 
-        for (i <- 0 until set) {
-            io.lut_expu_o.bits.rdata(i * 2)      := srams(i).sram_rd_o.bits.rdata(0)
-            io.lut_expu_o.bits.rdata(i * 2 + 1)  := srams(i).sram_rd_o.bits.rdata(1)
-        }
         for (i <- 0 until set) {
             srams(i).sram_rd_i.valid            :=  true.B    
             srams(i).sram_rd_i.bits.raddr(0)    :=  io.expu_lut_i.bits.raddr(i * 2)    
@@ -68,11 +63,6 @@ class ExpLUT(depth: Int, width: Int, set: Int) extends Module {
         }
         rlast      := true.B 
     }.otherwise {
-        io.lut_expu_o.valid      := false.B 
-        for (i <- 0 until set) {
-            io.lut_expu_o.bits.rdata(i * 2)       := 0.U
-            io.lut_expu_o.bits.rdata(i * 2 + 1)   := 0.U
-        }
         for (i <- 0 until set) {
             srams(i).sram_rd_i.valid         := false.B    
             srams(i).sram_rd_i.bits.raddr(0) := 0.U
@@ -81,6 +71,19 @@ class ExpLUT(depth: Int, width: Int, set: Int) extends Module {
         rlast      := false.B 
     }
 
+    when (rd_state === sDone) {
+        io.lut_expu_o.valid      := true.B 
+        for (i <- 0 until set) {
+            io.lut_expu_o.bits.rdata(i * 2)      := srams(i).sram_rd_o.bits.rdata(0)
+            io.lut_expu_o.bits.rdata(i * 2 + 1)  := srams(i).sram_rd_o.bits.rdata(1)
+        }
+    }.otherwise {
+        io.lut_expu_o.valid      := false.B 
+        for (i <- 0 until set) {
+            io.lut_expu_o.bits.rdata(i * 2)       := 0.U
+            io.lut_expu_o.bits.rdata(i * 2 + 1)   := 0.U
+        }
+    }
 
     // ===================== Preload(Wirte) LUT =============
     val value_state = RegInit(0.U(2.W))

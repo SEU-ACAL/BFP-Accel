@@ -18,6 +18,7 @@ class max_shift extends Bundle {
 }
 
 class ctrl_maxshift extends Bundle {val stall_en = Bool()}
+class ctrl_shiftsub extends Bundle {val stall_en = Bool()}
 
 class maxu_shiftu extends Module {  
     val ctrl_maxshift_i   = IO(Input(new ctrl_maxshift))
@@ -57,11 +58,12 @@ class shift_sub extends Bundle {
     val frac_vec = Vec(datain_bandwidth, UInt(frac_bitwidth.W))
 }
 class shiftu_subu extends Module {  
+    val ctrl_shiftsub_i  = IO(Input(new ctrl_maxshift))
     val shift_shiftsub_i = IO(Flipped(Decoupled(new shift_sub)))
     val shiftsub_sub_o   = IO(Decoupled(new shift_sub))
 
-    shiftsub_sub_o.valid    := shift_shiftsub_i.valid
-    shift_shiftsub_i.ready  := shiftsub_sub_o.ready
+    shiftsub_sub_o.valid    := Mux(~ctrl_shiftsub_i.stall_en, shift_shiftsub_i.valid,   false.B)
+    shift_shiftsub_i.ready  := Mux(~ctrl_shiftsub_i.stall_en, shiftsub_sub_o.ready, false.B)
 
     val shiftu_subu_hs = shiftsub_sub_o.valid & shift_shiftsub_i.ready
 
@@ -112,7 +114,7 @@ class lut_ldu extends Module {
 }
 
 
-class exp_lut extends Bundle { val raddr  = Vec(datain_bandwidth, UInt(frac_bitwidth.W)) }
+class exp_lut extends Bundle { val raddr  = Vec(datain_bandwidth, UInt(lutidx_bitwidth.W)) }
 class expu_lut extends Module {  
     val expu_explut_i  = IO(Flipped(Decoupled(new exp_lut)))
     val explut_lut_o   = IO(Decoupled(new exp_lut))
@@ -122,7 +124,7 @@ class expu_lut extends Module {
 
     val expu_lut_hs = expu_explut_i.valid & expu_explut_i.ready
 
-    explut_lut_o.bits.raddr  := hs_uvec_dff(expu_lut_hs, frac_bitwidth.U, datain_bandwidth,  VecInit(Seq.fill(datain_bandwidth)(0.U(frac_bitwidth.W))), expu_explut_i.bits.raddr )
+    explut_lut_o.bits.raddr  := hs_uvec_dff(expu_lut_hs, lutidx_bitwidth.U, datain_bandwidth,  VecInit(Seq.fill(datain_bandwidth)(0.U(lutidx_bitwidth.W))), expu_explut_i.bits.raddr )
 }
 
 class lut_exp extends Bundle { val rdata = Vec(datain_bandwidth, UInt(expvalue_bitwidth.W))}
