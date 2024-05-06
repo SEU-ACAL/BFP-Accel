@@ -27,31 +27,39 @@ class DMA extends Module {
     io.lut_dma_i.ready  := state === sIdle
     io.dram_dma_i.ready := state === sRun
     // ======================================================
-    val count      = RegInit(0.U(log2Up(dma_burst_len).W)) 
-    val raddr      = RegInit(0.U(log2Up(fullSet_size).W)) 
-    raddr         := raddr + count //* lut_width
-    last          := count === (dma_burst_len-1).U
+    val count      = RegInit(0.U((log2Up(dma_burst_len)+1).W)) 
+    val raddr      = WireInit(0.U(log2Up(fullSet_size).W)) 
+    raddr         := (io.lut_dma_i.bits.waddr >> 3) + count //* lut_width
+    last          := count === (dma_burst_len-1).U // 延时一个周期，屎山代码
 
 
     when (state === sRun) {
         io.dma_dram_o.valid        := true.B 
-        io.dma_dram_o.bits.raddr   := raddr
+        io.dma_dram_o.bits.raddr   := (io.lut_dma_i.bits.waddr >> 3) + count
 
-        io.dma_lut_o.valid        := true.B 
-        io.dma_lut_o.bits.wdata(0)  := io.dram_dma_i.bits.rdata(0)
-        io.dma_lut_o.bits.wdata(1)  := io.dram_dma_i.bits.rdata(1)
-
-        count                      := count + 1.U
     }.otherwise {
         io.dma_dram_o.valid        := false.B 
         io.dma_dram_o.bits.raddr   := 0.U
 
-        io.dma_lut_o.valid        := false.B 
-        io.dma_lut_o.bits.wdata(0) := 0.U
-        io.dma_lut_o.bits.wdata(1) := 0.U
-
-        count                      := 0.U
     }
 
-    io.dma_lut_o.bits.wlast        := last
+    val dma_lut_o_valid = RegInit(false.B)
+    val dma_lut_o_wdata = RegInit(VecInit(Seq.fill(2)(0.U(bus_width.W))))
+    
+    when (state =/= sIdle && io.dram_dma_i.valid) {
+        dma_lut_o_valid             := true.B 
+        io.dma_lut_o.bits.wdata(0)  := io.dram_dma_i.bits.rdata(0)
+        io.dma_lut_o.bits.wdata(1)  := io.dram_dma_i.bits.rdata(1)
+        count                       := count + 1.U
+    }.otherwise {
+        dma_lut_o_valid             := false.B 
+        io.dma_lut_o.bits.wdata(0)  := 0.U
+        io.dma_lut_o.bits.wdata(1)  := 0.U
+        count                       := 0.U
+    }
+
+    io.dma_lut_o.valid          := dma_lut_o_valid
+    // io.dma_lut_o.bits.wdata(0)  := dma_lut_o_wdata(0)
+    // io.dma_lut_o.bits.wdata(1)  := dma_lut_o_wdata(1)
+    io.dma_lut_o.bits.wlast     := last
 }

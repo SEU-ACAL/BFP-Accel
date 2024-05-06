@@ -3,7 +3,7 @@
 
 
 #define datain_bandwidth 8
-#define datain_lines     5
+#define datain_lines     10
 
 
 #endif

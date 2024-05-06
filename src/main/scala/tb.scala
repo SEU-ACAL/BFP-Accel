@@ -6,6 +6,7 @@ import chisel3.stage._
 
 import softmax._
 import define.MACRO._
+import define.FSM._
 
 import DPIC.softmax_input_fp16_line
 
@@ -28,44 +29,49 @@ class tb extends Module {
     val softmax_input_fp16 = Module(new softmax_input_fp16_line).io
 
     softmax.data_in  <> softmax_in
-
-    val data_in_hs  = WireInit(false.B)
-    val data_out_hs = WireInit(false.B)
+    softmax.data_out <> softmax_out
+    // ======================= FSM ==========================
+    // val state        = WireInit(sIdle)
+    val data_in_hs   = WireInit(false.B)
+    // val data_out_hs  = WireInit(false.B)
+    // val testend      = RegInit(false.B)
     data_in_hs      := softmax.data_in.valid && softmax_in.ready
-    data_out_hs     := softmax.data_out.valid && softmax_out.ready
+    // data_out_hs     := softmax.data_out.valid && softmax_out.ready
+    // state           := fsm(data_in_hs, data_out_hs)
+
+    // softmax_in.valid        := false.B
+    // val softmax_in_valid_r  = RegInit(false.B)
+    // softmax_in_valid_r      := true.B 
+    // softmax_in.valid        := softmax_in_valid_r // 屎山代码，第一周期要空掉，要不然第一周期拿不到正确值
+    softmax_in.valid        := true.B
+
+    softmax_out.ready       := true.B
+    // ======================================================
     
     val line_num = RegInit(0.U(log2Up(datain_lines).W))
     softmax_input_fp16.en       := true.B
     softmax_input_fp16.line_num := line_num
     
-    val softmax_in_valid_r = RegInit(false.B)
-    softmax_in_valid_r := true.B 
-    softmax_in.valid := softmax_in_valid_r // 屎山代码，第一周期要空掉，要不然第一周期拿不到正确值
-    // softmax_in.valid := true.B // 屎山代码，第一周期要空掉，要不然第一周期拿不到正确值
-    
-    // when (softmax.data_in.valid && softmax_in.ready) { // 屎山代码
     softmax_in.bits.raw_data := softmax_input_fp16.line_data
-    // }.otherwise {
-        // softmax_in.bits.raw_data := VecInit(Seq.fill(datain_bandwidth)(0.U(frac_bitwidth.W)))
-    // }
+    
 
-    when (data_in_hs) { // 屎山代码
+    // line_num := Mux(data_in_hs, line_num + 1.U, line_num)
+    
+    val first_line_flag  = RegInit(true.B) // 屎山代码
+
+    when (data_in_hs && first_line_flag) { // 屎山代码
+        line_num                 := line_num
+        first_line_flag          := false.B
+    }.elsewhen (data_in_hs && ~first_line_flag) {
         line_num                 := line_num + 1.U
+        // first_line_flag          := first_line_flag
     }.otherwise {
         line_num                 := line_num 
+        // first_line_flag          := first_line_flag
     }
 
 
-    softmax.data_out <> softmax_out
-    softmax_out.ready := true.B
-    when (softmax.data_out.valid && softmax_out.ready) {
-        // printf("result after precess [");
-        //     for (i <- 0 until datain_bandwidth) {
-        //         printf("(%d, %d, %d) ", Preprocess_inst.sign_o.bits(i), Preprocess_inst.exp_o.bits(i), Preprocess_inst.frac_o.bits(i));
-        //     }
-        // printf("]\n");
-    }
-
+    
 }
 
 

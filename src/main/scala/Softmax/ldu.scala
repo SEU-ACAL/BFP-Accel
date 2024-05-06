@@ -15,6 +15,9 @@ class load_exp (val bitwidth: Int, val bandwidth: Int) extends Module {
         val lut_ldu_i   = Flipped(Decoupled(new lut_ld))
         val ldu_lut_o   = Decoupled(new ld_lut)
         val ldu_expu_o  = Decoupled(new ld_exp)
+
+        val ldu_ctrl_o  = Output(new Bundle{ val ldu_busy  = Bool()})
+
     })
     // ======================= FSM ==========================
     val state            = WireInit(sIdle)
@@ -29,9 +32,13 @@ class load_exp (val bitwidth: Int, val bandwidth: Int) extends Module {
     when (state === sRun) {
         io.ldu_lut_o.valid            := true.B 
         io.ldu_lut_o.bits.lut_set_idx := io.maxu_ldu_i.bits.max_exp
+        
+        io.ldu_ctrl_o.ldu_busy   := true.B
     }.otherwise {
         io.ldu_lut_o.valid            := false.B 
         io.ldu_lut_o.bits.lut_set_idx := 0.U
+
+        io.ldu_ctrl_o.ldu_busy   := false.B
     }
 
     when (state === sDone) {

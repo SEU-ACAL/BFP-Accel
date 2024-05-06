@@ -23,20 +23,24 @@ class ExpLUT(depth: Int, width: Int, set: Int) extends Module {
         val lut_dma_o   = Decoupled(new lut_dma)    // write sram
     })
 
-    val wlast  = RegInit(false.B)
-    val flow   = RegInit(false.B)
-    val rlast  = RegInit(false.B)
+    val wlast       = RegInit(false.B)
+    val flow        = RegInit(false.B)
+    val rlast       = RegInit(false.B)
+    val has_loaded  = RegInit(false.B) // 判断要读的表和现有的表是不是一个指数
+
+
+    val lut_exp  = RegInit(0.U(exp_bitwidth.W))  // 现在lut中数对应的exp值(12 ~ 27)
     // ======================= FSM ==========================
     val wr_state        = WireInit(sIdle)
     val ldu_lut_i_hs    = io.ldu_lut_i.ready && io.ldu_lut_i.valid      // 输入写信号握手
     val lut_ldu_o_hs    = io.lut_ldu_o.ready && io.lut_ldu_o.valid      // 输出写信号握手
-    wr_state  := fsm(ldu_lut_i_hs, wlast || flow, lut_ldu_o_hs)
+    wr_state  := fsm(ldu_lut_i_hs, wlast || flow || has_loaded, lut_ldu_o_hs)
     io.ldu_lut_i.ready  := wr_state === sIdle
 
     val dma_state       = WireInit(sIdle)
     val lut_dma_o_hs    = io.lut_dma_o.ready && io.lut_dma_o.valid   // dma接收信号握手
     val dma_lut_i_hs    = io.dma_lut_i.ready && io.dma_lut_i.valid      // dma返回信号握手
-    dma_state := fsm(lut_dma_o_hs, dma_lut_i_hs, wlast)
+    dma_state := fsm(lut_dma_o_hs, wlast, true.B)
     io.dma_lut_i.ready  := dma_state === sIdle || dma_state === sRun
 
 
@@ -82,7 +86,7 @@ class ExpLUT(depth: Int, width: Int, set: Int) extends Module {
     val value_state = RegInit(0.U(2.W))
     val sram_waddr  = RegInit(0.U(log2Up(partSet_size).W))
     sram_waddr      := Mux(dma_lut_i_hs, sram_waddr + 1.U, sram_waddr)
-    val dram_raddr  = RegInit(0.U(log2Up(fullSet_size).W))    
+    val dram_raddr  = WireInit(0.U(log2Up(fullSet_size).W))    
 
     wlast := Mux(dma_lut_i_hs, io.dma_lut_i.bits.wlast, false.B)
 
@@ -92,23 +96,32 @@ class ExpLUT(depth: Int, width: Int, set: Int) extends Module {
             value_state    := 2.U
             flow           := true.B 
             dram_raddr     := 0.U
+            has_loaded     := false.B
         }.elsewhen (io.ldu_lut_i.bits.lut_set_idx <= underflow_threshold.U) {
             value_state    := 3.U
             flow           := true.B 
             dram_raddr     := 0.U
+            has_loaded     := false.B
+        }.elsewhen (io.ldu_lut_i.bits.lut_set_idx === lut_exp) {
+            value_state    := 1.U
+            flow           := false.B 
+            dram_raddr     := 0.U
+            has_loaded     := true.B
         }.otherwise {
             value_state    := 1.U
             flow           := false.B 
-            dram_raddr     := io.ldu_lut_i.bits.lut_set_idx * partSet_size.U
+            dram_raddr     := (io.ldu_lut_i.bits.lut_set_idx - underflow_threshold.U)* partSet_size.U
+            has_loaded     := false.B
         }
     }.otherwise {
         value_state        := 0.U 
         flow               := false.B 
         dram_raddr         := 0.U
+        has_loaded         := false.B
     }
 
     // step 2 数据送往dma 
-    when (wr_state === sRun && ~flow) {
+    when (wr_state === sRun && ~flow && ~wlast && ~has_loaded) {
         io.lut_dma_o.valid           := true.B 
         io.lut_dma_o.bits.waddr      := dram_raddr
         io.lut_dma_o.bits.wlen       := dma_burst_len.U
@@ -122,7 +135,7 @@ class ExpLUT(depth: Int, width: Int, set: Int) extends Module {
     when (dma_state === sRun) {
         for (sram <- srams) {
             sram.sram_wr_i.valid       := true.B 
-            sram.sram_wr_i.bits.waddr  := sram_waddr
+            sram.sram_wr_i.bits.waddr  := sram_waddr - 1.U // shit code
             sram.sram_wr_i.bits.wdata  := io.dma_lut_i.bits.wdata
         }
     }.otherwise {
@@ -143,6 +156,13 @@ class ExpLUT(depth: Int, width: Int, set: Int) extends Module {
         io.lut_ldu_o.bits.value_state    := 0.U
     }
     
+    when (wr_state === sDone) {
+        lut_exp               := io.ldu_lut_i.bits.lut_set_idx
+    }.otherwise {
+        lut_exp               := lut_exp
+    }
+
+    // lut_exp := Mux(dma_lut_i_hs, io.ldu_lut_i.bits.lut_set_idx, lut_exp)
 
 }
 

@@ -16,18 +16,24 @@ class max_shift extends Bundle {
     val exp_vec  = Vec(datain_bandwidth, UInt(exp_bitwidth.W))
     val frac_vec = Vec(datain_bandwidth, UInt(frac_bitwidth.W))
 }
+
+class ctrl_maxshift extends Bundle {val stall_en = Bool()}
+
 class maxu_shiftu extends Module {  
+    val ctrl_maxshift_i   = IO(Input(new ctrl_maxshift))
     val maxu_maxshift_i   = IO(Flipped(Decoupled(new max_shift)))
     val maxshift_shiftu_o = IO(Decoupled(new max_shift))
+    
+    maxshift_shiftu_o.valid         := Mux(~ctrl_maxshift_i.stall_en, maxu_maxshift_i.valid, false.B)
+    maxu_maxshift_i.ready           := Mux(~ctrl_maxshift_i.stall_en, maxshift_shiftu_o.ready, false.B)
 
-    maxshift_shiftu_o.valid         := maxu_maxshift_i.valid
-    maxu_maxshift_i.ready           := maxshift_shiftu_o.ready
+    val maxu_shiftu_hs = maxshift_shiftu_o.valid & maxu_maxshift_i.ready
 
-    maxshift_shiftu_o.bits.max      := hs_uint_dff(maxu_maxshift_i.valid, maxshift_shiftu_o.ready, exp_bitwidth.U,                       0.U,                                                       maxu_maxshift_i.bits.max )
-    maxshift_shiftu_o.bits.idx      := hs_uint_dff(maxu_maxshift_i.valid, maxshift_shiftu_o.ready, log2Up(datain_bandwidth).U,           0.U,                                                       maxu_maxshift_i.bits.idx )
-    maxshift_shiftu_o.bits.sign_vec := hs_uvec_dff(maxu_maxshift_i.valid, maxshift_shiftu_o.ready, 1.U,              datain_bandwidth, VecInit(Seq.fill(datain_bandwidth)(0.U(1.W))),             maxu_maxshift_i.bits.sign_vec)
-    maxshift_shiftu_o.bits.exp_vec  := hs_uvec_dff(maxu_maxshift_i.valid, maxshift_shiftu_o.ready, exp_bitwidth.U,   datain_bandwidth, VecInit(Seq.fill(datain_bandwidth)(0.U(exp_bitwidth.W))),  maxu_maxshift_i.bits.exp_vec )
-    maxshift_shiftu_o.bits.frac_vec := hs_uvec_dff(maxu_maxshift_i.valid, maxshift_shiftu_o.ready, frac_bitwidth.U,  datain_bandwidth, VecInit(Seq.fill(datain_bandwidth)(0.U(frac_bitwidth.W))), maxu_maxshift_i.bits.frac_vec)
+    maxshift_shiftu_o.bits.max      := hs_uint_dff(maxu_shiftu_hs, exp_bitwidth.U,                       0.U,                                                       maxu_maxshift_i.bits.max )
+    maxshift_shiftu_o.bits.idx      := hs_uint_dff(maxu_shiftu_hs, log2Up(datain_bandwidth).U,           0.U,                                                       maxu_maxshift_i.bits.idx )
+    maxshift_shiftu_o.bits.sign_vec := hs_uvec_dff(maxu_shiftu_hs, 1.U,              datain_bandwidth, VecInit(Seq.fill(datain_bandwidth)(0.U(1.W))),             maxu_maxshift_i.bits.sign_vec)
+    maxshift_shiftu_o.bits.exp_vec  := hs_uvec_dff(maxu_shiftu_hs, exp_bitwidth.U,   datain_bandwidth, VecInit(Seq.fill(datain_bandwidth)(0.U(exp_bitwidth.W))),  maxu_maxshift_i.bits.exp_vec )
+    maxshift_shiftu_o.bits.frac_vec := hs_uvec_dff(maxu_shiftu_hs, frac_bitwidth.U,  datain_bandwidth, VecInit(Seq.fill(datain_bandwidth)(0.U(frac_bitwidth.W))), maxu_maxshift_i.bits.frac_vec)
 }
 
 
@@ -39,7 +45,9 @@ class maxu_ldu extends Module {
     maxld_ldu_o.valid   := maxu_maxld_i.valid
     maxu_maxld_i.ready  := maxld_ldu_o.ready
 
-    maxld_ldu_o.bits.max_exp  := hs_uint_dff(maxu_maxld_i.valid, maxld_ldu_o.ready, exp_bitwidth.U,  0.U, maxu_maxld_i.bits.max_exp )
+    val maxu_ldu_hs = maxld_ldu_o.valid & maxu_maxld_i.ready
+
+    maxld_ldu_o.bits.max_exp  := hs_uint_dff(maxu_ldu_hs, exp_bitwidth.U,  0.U, maxu_maxld_i.bits.max_exp )
 }
 
 
@@ -55,9 +63,11 @@ class shiftu_subu extends Module {
     shiftsub_sub_o.valid    := shift_shiftsub_i.valid
     shift_shiftsub_i.ready  := shiftsub_sub_o.ready
 
-    shiftsub_sub_o.bits.idx      := hs_uint_dff(shift_shiftsub_i.valid, shiftsub_sub_o.ready, log2Up(datain_bandwidth).U,           0.U,                                                       shift_shiftsub_i.bits.idx )
-    shiftsub_sub_o.bits.sign_vec := hs_uvec_dff(shift_shiftsub_i.valid, shiftsub_sub_o.ready, 1.U,              datain_bandwidth, VecInit(Seq.fill(datain_bandwidth)(0.U(1.W))),             shift_shiftsub_i.bits.sign_vec)
-    shiftsub_sub_o.bits.frac_vec := hs_uvec_dff(shift_shiftsub_i.valid, shiftsub_sub_o.ready, frac_bitwidth.U,  datain_bandwidth, VecInit(Seq.fill(datain_bandwidth)(0.U(frac_bitwidth.W))), shift_shiftsub_i.bits.frac_vec)
+    val shiftu_subu_hs = shiftsub_sub_o.valid & shift_shiftsub_i.ready
+
+    shiftsub_sub_o.bits.idx      := hs_uint_dff(shiftu_subu_hs, log2Up(datain_bandwidth).U,           0.U,                                                       shift_shiftsub_i.bits.idx )
+    shiftsub_sub_o.bits.sign_vec := hs_uvec_dff(shiftu_subu_hs, 1.U,              datain_bandwidth, VecInit(Seq.fill(datain_bandwidth)(0.U(1.W))),             shift_shiftsub_i.bits.sign_vec)
+    shiftsub_sub_o.bits.frac_vec := hs_uvec_dff(shiftu_subu_hs, frac_bitwidth.U,  datain_bandwidth, VecInit(Seq.fill(datain_bandwidth)(0.U(frac_bitwidth.W))), shift_shiftsub_i.bits.frac_vec)
 }
 
 
@@ -69,11 +79,13 @@ class subu_expu extends Module {
     subexp_expu_o.valid   := subu_subexp_i.valid
     subu_subexp_i.ready   := subexp_expu_o.ready
 
-    subexp_expu_o.bits.frac_vec  := hs_uvec_dff(subu_subexp_i.valid, subexp_expu_o.ready, exp_bitwidth.U, datain_bandwidth, VecInit(Seq.fill(datain_bandwidth)(0.U(frac_bitwidth.W))), subu_subexp_i.bits.frac_vec )
+    val subu_expu_hs = subexp_expu_o.valid & subu_subexp_i.ready
+
+    subexp_expu_o.bits.frac_vec  := hs_uvec_dff(subu_expu_hs, exp_bitwidth.U, datain_bandwidth, VecInit(Seq.fill(datain_bandwidth)(0.U(frac_bitwidth.W))), subu_subexp_i.bits.frac_vec )
 }
 
 
-class ld_lut  extends Bundle { val lut_set_idx = UInt(log2Up(lut_set).W) }
+class ld_lut  extends Bundle { val lut_set_idx = UInt(exp_bitwidth.W) }
 class ldu_lut extends Module {  
     val ldu_ldlut_i  = IO(Flipped(Decoupled(new ld_lut)))
     val ldlut_lut_o  = IO(Decoupled(new ld_lut))
@@ -81,7 +93,9 @@ class ldu_lut extends Module {
     ldlut_lut_o.valid  := ldu_ldlut_i.valid
     ldu_ldlut_i.ready  := ldlut_lut_o.ready
 
-    ldlut_lut_o.bits.lut_set_idx  := hs_uint_dff(ldu_ldlut_i.valid, ldlut_lut_o.ready, log2Up(lut_set).U,  0.U, ldu_ldlut_i.bits.lut_set_idx)
+    val ldu_lut_hs = ldlut_lut_o.valid & ldu_ldlut_i.ready
+
+    ldlut_lut_o.bits.lut_set_idx  := hs_uint_dff(ldu_lut_hs, exp_bitwidth.U,  0.U, ldu_ldlut_i.bits.lut_set_idx)
 }
 
 class lut_ld  extends Bundle { val value_state = UInt(2.W) } // 01 normal_value, 10 overflow, 11 underflow, 00 load_unfinish 
@@ -92,7 +106,9 @@ class lut_ldu extends Module {
     lutld_ldu_o.valid  := lut_lutld_i.valid
     lut_lutld_i.ready  := lutld_ldu_o.ready
 
-    lutld_ldu_o.bits.value_state  := hs_uint_dff(lut_lutld_i.valid, lutld_ldu_o.ready, 2.U,  0.U, lut_lutld_i.bits.value_state )
+    val lut_ldu_hs = lutld_ldu_o.valid & lut_lutld_i.ready
+
+    lutld_ldu_o.bits.value_state  := hs_uint_dff(lut_ldu_hs, 2.U,  0.U, lut_lutld_i.bits.value_state )
 }
 
 
@@ -104,7 +120,9 @@ class expu_lut extends Module {
     explut_lut_o.valid   := expu_explut_i.valid
     expu_explut_i.ready  := explut_lut_o.ready
 
-    explut_lut_o.bits.raddr  := hs_uvec_dff(expu_explut_i.valid, explut_lut_o.ready, frac_bitwidth.U, datain_bandwidth,  VecInit(Seq.fill(datain_bandwidth)(0.U(frac_bitwidth.W))), expu_explut_i.bits.raddr )
+    val expu_lut_hs = expu_explut_i.valid & expu_explut_i.ready
+
+    explut_lut_o.bits.raddr  := hs_uvec_dff(expu_lut_hs, frac_bitwidth.U, datain_bandwidth,  VecInit(Seq.fill(datain_bandwidth)(0.U(frac_bitwidth.W))), expu_explut_i.bits.raddr )
 }
 
 class lut_exp extends Bundle { val rdata = Vec(datain_bandwidth, UInt(expvalue_bitwidth.W))}
@@ -115,7 +133,9 @@ class lut_expu extends Module {
     lutexp_exp_o.valid  := lut_lutexp_i.valid
     lut_lutexp_i.ready  := lutexp_exp_o.ready
 
-    lutexp_exp_o.bits.rdata  := hs_uvec_dff(lut_lutexp_i.valid, lutexp_exp_o.ready, expvalue_bitwidth.U, datain_bandwidth, VecInit(Seq.fill(datain_bandwidth)(0.U(expvalue_bitwidth.W))), lut_lutexp_i.bits.rdata )
+    val lut_expu_hs = lutexp_exp_o.valid & lut_lutexp_i.ready
+
+    lutexp_exp_o.bits.rdata  := hs_uvec_dff(lut_expu_hs, expvalue_bitwidth.U, datain_bandwidth, VecInit(Seq.fill(datain_bandwidth)(0.U(expvalue_bitwidth.W))), lut_lutexp_i.bits.rdata )
 }
 
 
@@ -130,8 +150,10 @@ class lut_dma_regs extends Module {
     lutdma_dma_o.valid  := lut_lutdma_i.valid
     lut_lutdma_i.ready  := lutdma_dma_o.ready
 
-    lutdma_dma_o.bits.waddr  := hs_uint_dff(lut_lutdma_i.valid, lutdma_dma_o.ready, log2Up(fullSet_size).U, 0.U, lut_lutdma_i.bits.waddr )
-    lutdma_dma_o.bits.wlen  := hs_uint_dff(lut_lutdma_i.valid, lutdma_dma_o.ready, log2Up(dma_burst_len).U, 0.U, lut_lutdma_i.bits.wlen )
+    val lut_dma_hs = lutdma_dma_o.valid & lut_lutdma_i.ready
+
+    lutdma_dma_o.bits.waddr := hs_uint_dff(lut_dma_hs, log2Up(fullSet_size).U, 0.U, lut_lutdma_i.bits.waddr )
+    lutdma_dma_o.bits.wlen  := hs_uint_dff(lut_dma_hs, log2Up(dma_burst_len).U, 0.U, lut_lutdma_i.bits.wlen )
 }
 
 class dma_lut extends Bundle { 
@@ -145,8 +167,10 @@ class dma_lut_regs extends Module {
     dmalut_lut_o.valid  := dma_dmalut_i.valid
     dma_dmalut_i.ready  := dmalut_lut_o.ready
 
-    dmalut_lut_o.bits.wdata  := hs_uvec_dff(dma_dmalut_i.valid, dmalut_lut_o.ready, bus_width.U, 2, VecInit(Seq.fill(2)(0.U(bus_width.W))), dma_dmalut_i.bits.wdata )
-    dmalut_lut_o.bits.wlast  := hs_bool_dff(dma_dmalut_i.valid, dmalut_lut_o.ready, false.B, dma_dmalut_i.bits.wlast )
+    val dma_lut_hs = dmalut_lut_o.valid & dma_dmalut_i.ready
+
+    dmalut_lut_o.bits.wdata  := hs_uvec_dff(dma_lut_hs, bus_width.U, 2, VecInit(Seq.fill(2)(0.U(bus_width.W))), dma_dmalut_i.bits.wdata )
+    dmalut_lut_o.bits.wlast  := hs_bool_dff(dma_lut_hs, false.B, dma_dmalut_i.bits.wlast )
 }
 
 class dma_dram extends Bundle { val raddr  = UInt(log2Up(fullSet_size).W)}
@@ -157,7 +181,9 @@ class dma_dram_regs extends Module {
     dmadram_dram_o.valid   := dma_dmadram_i.valid
     dma_dmadram_i.ready  := dmadram_dram_o.ready
 
-    dmadram_dram_o.bits.raddr  := hs_uint_dff(dma_dmadram_i.valid, dmadram_dram_o.ready, frac_bitwidth.U, datain_bandwidth.U, dma_dmadram_i.bits.raddr )
+    val dma_dram_hs = dmadram_dram_o.valid & dma_dmadram_i.ready
+
+    dmadram_dram_o.bits.raddr  := hs_uint_dff(dma_dram_hs, frac_bitwidth.U, 0.U, dma_dmadram_i.bits.raddr )
 }
 
 class dram_dma extends Bundle { val rdata  = Vec(2, UInt((bus_width).W))}
@@ -168,7 +194,9 @@ class dram_dma_regs extends Module {
     dramdma_dma_o.valid  := dram_dramdma_i.valid
     dram_dramdma_i.ready  := dramdma_dma_o.ready
 
-    dramdma_dma_o.bits.rdata  := hs_uvec_dff(dram_dramdma_i.valid, dramdma_dma_o.ready, bus_width.U, 2, VecInit(Seq.fill(2)(0.U(bus_width.W))), dram_dramdma_i.bits.rdata )
+    val dram_dma_hs = dramdma_dma_o.valid & dram_dramdma_i.ready
+
+    dramdma_dma_o.bits.rdata  := hs_uvec_dff(dram_dma_hs, bus_width.U, 2, VecInit(Seq.fill(2)(0.U(bus_width.W))), dram_dramdma_i.bits.rdata )
 }
 
 
@@ -180,7 +208,9 @@ class ldu_expu extends Module {
     lutexp_exp_o.valid  := ldu_ldexp_i.valid
     ldu_ldexp_i.ready   := lutexp_exp_o.ready
 
-    lutexp_exp_o.bits.value_state  := hs_uint_dff(ldu_ldexp_i.valid, lutexp_exp_o.ready, 2.U,  0.U, ldu_ldexp_i.bits.value_state )
+    val ldu_expu_hs = lutexp_exp_o.valid & ldu_ldexp_i.ready
+
+    lutexp_exp_o.bits.value_state  := hs_uint_dff(ldu_expu_hs, 2.U,  0.U, ldu_ldexp_i.bits.value_state )
 }
 
 
@@ -194,7 +224,9 @@ class expu_addu extends Module {
     expadd_addu_o.valid  := expu_expadd_i.valid
     expu_expadd_i.ready  := expadd_addu_o.ready
 
-    expadd_addu_o.bits.frac_vec  := hs_uvec_dff(expu_expadd_i.valid, expadd_addu_o.ready, frac_bitwidth.U, datain_bandwidth, VecInit(Seq.fill(datain_bandwidth)(0.U(frac_bitwidth.W))), expu_expadd_i.bits.frac_vec )
+    val expu_addu_hs = expadd_addu_o.valid & expu_expadd_i.ready
+
+    expadd_addu_o.bits.frac_vec  := hs_uvec_dff(expu_addu_hs, frac_bitwidth.U, datain_bandwidth, VecInit(Seq.fill(datain_bandwidth)(0.U(frac_bitwidth.W))), expu_expadd_i.bits.frac_vec )
 }
 
 
@@ -210,6 +242,8 @@ class addu_divu extends Module {
     adddiv_divu_o.valid  := addu_adddiv_i.valid
     addu_adddiv_i.ready  := adddiv_divu_o.ready
 
-    adddiv_divu_o.bits.sum        := hs_uint_dff(addu_adddiv_i.valid, adddiv_divu_o.ready, frac_bitwidth.U,                     0.U, addu_adddiv_i.bits.sum )
-    adddiv_divu_o.bits.frac_vec   := hs_uvec_dff(addu_adddiv_i.valid, adddiv_divu_o.ready, frac_bitwidth.U, datain_bandwidth, VecInit(Seq.fill(datain_bandwidth)(0.U(frac_bitwidth.W))), addu_adddiv_i.bits.frac_vec )
+    val addu_divu_hs = adddiv_divu_o.valid & addu_adddiv_i.ready
+
+    adddiv_divu_o.bits.sum        := hs_uint_dff(addu_divu_hs, frac_bitwidth.U,                     0.U, addu_adddiv_i.bits.sum )
+    adddiv_divu_o.bits.frac_vec   := hs_uvec_dff(addu_divu_hs, frac_bitwidth.U, datain_bandwidth, VecInit(Seq.fill(datain_bandwidth)(0.U(frac_bitwidth.W))), addu_adddiv_i.bits.frac_vec )
 }

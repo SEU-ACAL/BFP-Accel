@@ -32,8 +32,8 @@ class frac_shift(val bandwidth: Int) extends Module {
     val state               = WireInit(sIdle)
     val ShiftDone           = WireInit(false.B)
     val maxu_shiftu_i_hs    = io.maxu_shiftu_i.ready && io.maxu_shiftu_i.valid
-    val shiftu_subu_o       = io.shiftu_subu_o.ready && io.shiftu_subu_o.valid
-    state := fsm(maxu_shiftu_i_hs, ShiftDone, shiftu_subu_o)
+    val shiftu_subu_o_hs       = io.shiftu_subu_o.ready && io.shiftu_subu_o.valid
+    state := fsm(maxu_shiftu_i_hs, ShiftDone, shiftu_subu_o_hs)
     io.maxu_shiftu_i.ready := state === sIdle
     // ======================================================
 

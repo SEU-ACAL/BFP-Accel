@@ -18,6 +18,7 @@ import subu._
 import DMA._
 import DRAM._
 import pipeline._
+import CTRL._
 
 import chisel3.util.experimental.loadMemoryFromFileInline
 import firrtl.annotations.MemoryLoadFileType
@@ -65,6 +66,7 @@ class softmax extends Module {
     val DIV_inst    = Module(new div(bitwidth = exp_bitwidth, bandwidth = cycle_bandwidth)).io 
     val DMA_inst    = Module(new DMA).io 
     val DRAM_inst   = Module(new DualPortDRAM(depth = dram_depth, width = bus_width)) 
+    val CTRL_inst   = Module(new CTRL).io 
 
 
     val maxu_shiftu_inst = Module(new maxu_shiftu   )// .io 
@@ -166,6 +168,11 @@ class softmax extends Module {
 
     data_out                <>  DIV_inst.divu_o
 
+
+   // ==================== CTRL =========================
+
+    CTRL_inst.ldu_ctrl_i             <> LDU_inst.ldu_ctrl_o
+    maxu_shiftu_inst.ctrl_maxshift_i <> CTRL_inst.ctrl_maxshift_o
 }
 
 

@@ -30,7 +30,6 @@ maxu_shiftu_o
         val maxu_ldu_o      = Decoupled(new max_ld)
     })
 
-
     val    CompareDone   = WireInit(false.B)
 
     // ======================= FSM ==========================
@@ -61,8 +60,8 @@ maxu_shiftu_o
 
     when (state === sRun) {
         io.maxu_shiftu_o.valid     := false.B 
-        io.maxu_shiftu_o.bits.max       := 0.U
-        io.maxu_shiftu_o.bits.idx       := 0.U
+        io.maxu_shiftu_o.bits.max  := 0.U
+        io.maxu_shiftu_o.bits.idx  := 0.U
 
         io.maxu_ldu_o.valid        := false.B
         io.maxu_ldu_o.bits.max_exp := 0.U
@@ -105,8 +104,8 @@ class CompareUnit(bitwidth: Int) extends Module {
     })
 
     val greater = ((io.sign1 < io.sign2)  || 
-        ((io.sign1 === 1.U) & (io.sign2 === 1.U) & (io.data1 > io.data2)) ||
-         ((io.sign1 === 0.U) & (io.sign2 === 0.U) & (io.data1 < io.data2))) 
+        ((io.sign1 === 1.U) & (io.sign2 === 1.U) & (io.data1 < io.data2)) ||
+         ((io.sign1 === 0.U) & (io.sign2 === 0.U) & (io.data1 > io.data2))) 
     
     io.data_o   := Mux(greater, io.data1, io.data2)
     io.idx_o    := Mux(greater, io.idx1, io.idx2)

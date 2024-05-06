@@ -27,7 +27,7 @@ object MACRO {
     val dram_depth           = fullSet_size / lut_width  
     val dram_bitwidth        = 16
 
-    val dma_burst_len        = dram_depth / 2 // dual port
+    val dma_burst_len        = lut_depth / 2 // dual port
     val bus_width            = lut_width * lut_bitwidth
 
     val underflow_threshold = 11     // 0~11
@@ -94,19 +94,19 @@ object FSM {
 }
 
 object function {
-    def hs_uint_dff(valid: Bool, ready: Bool, DataWidth: UInt, data_default: UInt, data_i: UInt): UInt = {
+    def hs_uint_dff(handshake: Bool, DataWidth: UInt, data_default: UInt, data_i: UInt): UInt = {
         val data_o = RegInit(data_default)
-        data_o := Mux(valid && ready, data_i, data_o)
+        data_o := Mux(handshake, data_i, data_o)
         data_o
     }
-    def hs_uvec_dff(valid: Bool, ready: Bool, DataWidth: UInt, BandWidth: Int, data_default: Vec[UInt], data_i: Vec[UInt]): Vec[UInt] = {
+    def hs_uvec_dff(handshake: Bool, DataWidth: UInt, BandWidth: Int, data_default: Vec[UInt], data_i: Vec[UInt]): Vec[UInt] = {
         val data_o = RegInit(data_default)
-        data_o := Mux(valid && ready, data_i, data_o)
+        data_o := Mux(handshake, data_i, data_o)
         data_o
     }
-    def hs_bool_dff(valid: Bool, ready: Bool, bool_default: Bool, data_i: Bool): UInt = {
+    def hs_bool_dff(handshake: Bool, bool_default: Bool, data_i: Bool): UInt = {
         val data_o = RegInit(bool_default)
-        data_o := Mux(valid && ready, data_i, data_o)
+        data_o := Mux(handshake, data_i, data_o)
         data_o
     }
 }
