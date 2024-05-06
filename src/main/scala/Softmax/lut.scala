@@ -53,6 +53,8 @@ class ExpLUT(depth: Int, width: Int, set: Int) extends Module {
     // 实例化n个双端口SRAM
     val srams = Seq.fill(set)(Module(new DualPortSRAM(depth, width)).io)
 
+    val srams_rdata1 = RegInit(VecInit(Seq.fill(2*set)(0.U(expvalue_bitwidth.W))))
+    val srams_rdata2 = RegInit(VecInit(Seq.fill(2*set)(0.U(expvalue_bitwidth.W)))) // shit code
     // ===================== Read LUT =============
      
     when (rd_state === sRun) {
@@ -61,6 +63,10 @@ class ExpLUT(depth: Int, width: Int, set: Int) extends Module {
             srams(i).sram_rd_i.bits.raddr(0)    :=  io.expu_lut_i.bits.raddr(i * 2)    
             srams(i).sram_rd_i.bits.raddr(1)    :=  io.expu_lut_i.bits.raddr(i * 2 + 1)
         }
+       for (i <- 0 until set) {
+            srams_rdata1(i*2)    := srams(i).sram_rd_o.bits.rdata(0)
+            srams_rdata1(i*2+1)  := srams(i).sram_rd_o.bits.rdata(1)
+        }
         rlast      := true.B 
     }.otherwise {
         for (i <- 0 until set) {
@@ -68,14 +74,23 @@ class ExpLUT(depth: Int, width: Int, set: Int) extends Module {
             srams(i).sram_rd_i.bits.raddr(0) := 0.U
             srams(i).sram_rd_i.bits.raddr(1) := 0.U
         }
+        for (i <- 0 until set) {
+            srams_rdata1(i*2)         := 0.U
+            srams_rdata1(i*2+1)       := 0.U
+        }
         rlast      := false.B 
+    }
+
+   for (i <- 0 until set) {
+        srams_rdata2(i*2)    := srams_rdata1(i*2)  
+        srams_rdata2(i*2+1)  := srams_rdata1(i*2+1)
     }
 
     when (rd_state === sDone) {
         io.lut_expu_o.valid      := true.B 
         for (i <- 0 until set) {
-            io.lut_expu_o.bits.rdata(i * 2)      := srams(i).sram_rd_o.bits.rdata(0)
-            io.lut_expu_o.bits.rdata(i * 2 + 1)  := srams(i).sram_rd_o.bits.rdata(1)
+            io.lut_expu_o.bits.rdata(i * 2)      := srams_rdata2(i*2)  
+            io.lut_expu_o.bits.rdata(i * 2 + 1)  := srams_rdata2(i*2+1)
         }
     }.otherwise {
         io.lut_expu_o.valid      := false.B 
@@ -177,7 +192,7 @@ class sram_wr_input extends Bundle {
     val waddr     = UInt(log2Up(partSet_size).W)
     val wdata     = Vec(2, UInt(bus_width.W))
 }
-class sram_rd_input extends Bundle { val raddr     = Vec(2, UInt(log2Up(fullSet_size).W))}
+class sram_rd_input extends Bundle { val raddr     = Vec(2, UInt(log2Up(partSet_size).W))}
 class sram_rd_output extends Bundle { val rdata     = Vec(2, UInt(bitwidth.W))}
 
 
@@ -218,8 +233,8 @@ class DualPortSRAM(depth: Int, width: Int = 64) extends Module {
     }
 
     when (io.sram_rd_i.valid) {
-        io.sram_rd_o.bits.rdata(0) := readSegment(io.sram_rd_i.bits.raddr(0)(6, 0), io.sram_rd_i.bits.raddr(0)(9, 7))
-        io.sram_rd_o.bits.rdata(1) := readSegment(io.sram_rd_i.bits.raddr(1)(6, 0), io.sram_rd_i.bits.raddr(1)(9, 7))
+        io.sram_rd_o.bits.rdata(0) := readSegment(io.sram_rd_i.bits.raddr(0)(7, 3), io.sram_rd_i.bits.raddr(0)(2, 0))
+        io.sram_rd_o.bits.rdata(1) := readSegment(io.sram_rd_i.bits.raddr(1)(7, 3), io.sram_rd_i.bits.raddr(1)(2, 0))
     }.otherwise {
         io.sram_rd_o.bits.rdata(0) := 0.U
         io.sram_rd_o.bits.rdata(1) := 0.U

@@ -55,7 +55,8 @@ class get_exp (val bitwidth: Int, val bandwidth: Int) extends Module {
     // to addu
     when (state === sDone) {
         io.expu_addu_o.valid            := true.B 
-        io.expu_addu_o.bits.frac_vec    := io.lut_expu_i.bits.rdata
+        // io.expu_addu_o.bits.frac_vec    := io.lut_expu_i.bits.rdata
+        for (i <- 0 until bandwidth) {io.expu_addu_o.bits.frac_vec(i) := io.lut_expu_i.bits.rdata(i)(9, 0)}
     }.otherwise {
         io.expu_addu_o.valid            := false.B 
         io.expu_addu_o.bits.frac_vec    := VecInit(Seq.fill(bandwidth)(0.U(expvalue_bitwidth.W)))

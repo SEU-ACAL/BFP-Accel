@@ -12,11 +12,11 @@ import DPIC.softmax_input_fp16_line
 
 
 class SoftMax_Input extends Bundle {
-    val raw_data = Vec(datain_bandwidth, UInt(bitwidth.W))
+    val raw_data = Vec(datain_bandwidth, UInt(datain_bitwidth.W))
 }
 
 class SoftMax_Output extends Bundle {
-    val res_data = Vec(datain_bandwidth, UInt(bitwidth.W))
+    val res_data = Vec(datain_bandwidth, UInt(dataout_bitwidth.W))
 }
 
 

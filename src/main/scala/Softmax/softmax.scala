@@ -96,21 +96,21 @@ class softmax extends Module {
     Shift_inst.maxu_shiftu_i         <> maxu_shiftu_inst.maxshift_shiftu_o
 
 
-    when (Shift_inst.shiftu_subu_o.valid) {
-        printf("step 1 share exp [");
-        for (i <- 0 until cycle_bandwidth) { printf("(%d) ", Shift_inst.shiftu_subu_o.bits.frac_vec(i));}
-        printf("]\n");
-    }
+    // when (Shift_inst.shiftu_subu_o.valid) {
+    //     printf("step 1 share exp [");
+    //     for (i <- 0 until cycle_bandwidth) { printf("(%d) ", Shift_inst.shiftu_subu_o.bits.frac_vec(i));}
+    //     printf("]\n");
+    // }
 
     // ======================= 减最大值 ===========================
     Shift_inst.shiftu_subu_o    <> shiftu_subu_inst.shift_shiftsub_i 
     Sub_inst.shift_subu_i       <> shiftu_subu_inst.shiftsub_sub_o
 
-    when (Shift_inst.shiftu_subu_o.valid) {
-        printf("step 2 Minus the max value [");
-        for (i <- 0 until cycle_bandwidth) { printf("(%d) ", Sub_inst.subu_expu_o.bits.frac_vec(i));}
-        printf("]\n");
-    }
+    // when (Shift_inst.shiftu_subu_o.valid) {
+    //     printf("step 2 Minus the max value [");
+    //     for (i <- 0 until cycle_bandwidth) { printf("(%d) ", Sub_inst.subu_expu_o.bits.frac_vec(i));}
+    //     printf("]\n");
+    // }
 
     // ======================= 预加载表 ===========================
     // maxu to ldu
@@ -148,11 +148,11 @@ class softmax extends Module {
     LUT_inst.lut_expu_o    <> lut_expu_inst.lut_lutexp_i
     EXP_inst.lut_expu_i    <> lut_expu_inst.lutexp_exp_o
 
-    when (Shift_inst.shiftu_subu_o.valid) {
-        printf("step 3 find data in lut [");
-        for (i <- 0 until cycle_bandwidth) { printf("(%d) ", EXP_inst.expu_addu_o.bits.frac_vec(i));}
-        printf("]\n");
-    }
+    // when (Shift_inst.shiftu_subu_o.valid) {
+    //     printf("step 3 find data in lut [");
+    //     for (i <- 0 until cycle_bandwidth) { printf("(%d) ", EXP_inst.expu_addu_o.bits.frac_vec(i));}
+    //     printf("]\n");
+    // }
 
 
 
@@ -162,16 +162,21 @@ class softmax extends Module {
     EXP_inst.expu_addu_o     <> expu_addu_inst.expu_expadd_i
     ADD_inst.expu_addu_i     <> expu_addu_inst.expadd_addu_o
 
-    when (ADD_inst.addu_divu_o.valid) {
-        printf("step 4 caculate sum = (%d)\n", ADD_inst.addu_divu_o.bits.sum);
-    }
+    // when (ADD_inst.addu_divu_o.valid) {
+    //     printf("step 4 caculate sum = (%d)\n", ADD_inst.addu_divu_o.bits.sum);
+    // }
 
     
     // ======================= 除法 ===========================
     ADD_inst.addu_divu_o    <> addu_divu_inst.addu_adddiv_i
     DIV_inst.addu_divu_i    <> addu_divu_inst.adddiv_divu_o
 
-     
+    when (DIV_inst.divu_o.valid) {
+        printf("step 5 div results [");
+        for (i <- 0 until cycle_bandwidth) { printf("(%d) ", DIV_inst.divu_o.bits.res_data(i));}
+        printf("]\n");
+    }
+
 
     // ==================== Output ! =========================
     run_done                 := DIV_inst.divu_o.valid

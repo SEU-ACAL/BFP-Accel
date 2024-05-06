@@ -9,7 +9,7 @@ import define.FSM._
 
 import pipeline._
 
-class div_output extends Bundle { val res_data = (Vec(cycle_bandwidth, UInt(expvalue_bitwidth.W)))}
+class div_output extends Bundle { val res_data = (Vec(cycle_bandwidth, UInt(dataout_bitwidth.W)))}
 class div (val bitwidth: Int, val bandwidth: Int) extends Module {
     val io = IO(new Bundle {
         val addu_divu_i = Flipped(Decoupled(new add_div))

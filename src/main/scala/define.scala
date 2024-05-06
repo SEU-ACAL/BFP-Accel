@@ -9,7 +9,8 @@ object MACRO {
     val datain_bandwidth    = 8
     val cycle_bandwidth     = 8
     val datain_lines        = 5
-    val dataout_bandwidth   = 16    
+    val datain_bitwidth     = 16    
+    val dataout_bitwidth    = 16    
     val bitwidth            = 16
     val exp_bitwidth        = 5
     val frac_bitwidth       = 10
