@@ -1,7 +1,7 @@
 #include "tet.h"
 #include <getopt.h>
-#include <utils/macro.h>
-#include <utils/debug.h>
+#include "utils/macro.h"
+#include "utils/debug.h"
 
 
 static void welcome() {

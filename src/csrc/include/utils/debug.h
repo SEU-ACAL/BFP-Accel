@@ -1,7 +1,7 @@
 #ifndef __DEBUG_H__
 #define __DEBUG_H__
 
-#include <utils/macro.h>
+#include "utils/macro.h"
 #include <stdio.h>
 
 // 不带格式化的

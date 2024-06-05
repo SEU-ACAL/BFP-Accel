@@ -6,9 +6,15 @@ import chisel3.stage._
 
 
 object MACRO { 
-    val datain_bandwidth    = 8
-    val cycle_bandwidth     = 8
-    val datain_lines        = 5
+    val datain_bandwidth    = 128
+    val cycle_bandwidth     = 64
+    val maxBatch            = datain_bandwidth / cycle_bandwidth // 最大batch数
+    val dataout_bandwidth   = cycle_bandwidth
+    val datain_lines        = 4//1024
+
+    val maxmem_depth        = datain_bandwidth/cycle_bandwidth
+    val maxmem_width        = cycle_bandwidth
+
     val datain_bitwidth     = 16    
     val dataout_bitwidth    = 16    
     val bitwidth            = 16
@@ -19,12 +25,15 @@ object MACRO {
     val lutidx_bitwidth    = 8
 
     val partSet_size       = 256 // 有多少个数
-    val fullSet_size       = partSet_size * 17 // 除去underflow和overflower一共17个set可用
+    val partSet_num        = 17 // 有多少个小表
+    val fullSet_size       = partSet_size * partSet_num // 除去underflow和overflower一共17个set可用
+
+    val dram_set             = 2 //实际是1个
 
     val lut_width           = 8
-    val lut_depth           = partSet_size / lut_width
+    val lut_depth           = partSet_size / lut_width / dram_set // set数翻倍了，lut深度折半了
     val lut_bitwidth        = 16
-    val lut_set             = 4
+    val lut_set             = 2//8 //实际是4个
 
     val dram_width           = lut_width
     val dram_depth           = fullSet_size / lut_width  
@@ -111,5 +120,18 @@ object function {
         val data_o = RegInit(bool_default)
         data_o := Mux(handshake, data_i, data_o)
         data_o
+    }
+}
+
+object test {
+    def CycleCounter(enable: Bool, reset: Bool, stage: Int): UInt = {
+        val counter = RegInit(0.U(32.W))
+        when(reset) {
+            printf("[stage[%d]-%d-cycles]\n", stage.U, counter)
+            counter := 0.U
+        }.elsewhen(enable) {
+            counter := counter + 1.U
+        }
+            counter
     }
 }

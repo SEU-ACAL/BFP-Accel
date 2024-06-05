@@ -1,6 +1,6 @@
 #include "tet.h"
-#include <utils/macro.h>
-#include <utils/debug.h>
+#include "utils/macro.h"
+#include "utils/debug.h"
 #include <readline/readline.h>
 #include <readline/history.h>
 
