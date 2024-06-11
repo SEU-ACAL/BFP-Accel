@@ -84,6 +84,8 @@ class MAX_stage(bandwidth_in: Int, bandwidth_out: Int) extends Module {
     
     val count        = RegInit(0.U(log2Up(maxmem_depth).W))
 
+    // val comparators = VecInit(Seq.fill(CompareTreeNums)(Module(new TreeComparator(exp_bitwidth, datain_bandwidth)).io))
+
     val comparator = Module(new TreeComparator(exp_bitwidth, datain_bandwidth)).io
     comparator.sign_vec := datain_sign
     comparator.data_vec := datain_exp

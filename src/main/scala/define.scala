@@ -6,14 +6,23 @@ import chisel3.stage._
 
 
 object MACRO { 
-    val datain_bandwidth    = 128
+    // ============ ComparatorTree ======
+    val SmallTreeNums       = 6
+    val SmallTreeBandwidth  = 32
+    val MaxinBandwidth      = 32
+
+    val maxmem_depth        = datain_bandwidth/MaxinBandwidth
+    val maxmem_width        = MaxinBandwidth
+
+
+    // ==================================
+    val datain_bandwidth    = 1024
     val cycle_bandwidth     = 64
     val maxBatch            = datain_bandwidth / cycle_bandwidth // 最大batch数
     val dataout_bandwidth   = cycle_bandwidth
     val datain_lines        = 4//1024
 
-    val maxmem_depth        = datain_bandwidth/cycle_bandwidth
-    val maxmem_width        = cycle_bandwidth
+
 
     val datain_bitwidth     = 16    
     val dataout_bitwidth    = 16    

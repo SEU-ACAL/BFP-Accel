@@ -52,8 +52,8 @@ test:
 verilog:
 	$(shell mkdir -p $(BUILD_DIR))
 #	JAVA_OPTS="-Xmx64g" 	
-#	mill --jobs ${NUM_JOBs}	-i __.test.runMain Elaborate -td $(BUILD_DIR) -X mverilog 
-	mill -i __.test.runMain Elaborate -td /home/shiroha/Code/Backend/ml-accelerator/build -ll debug
+	mill --jobs ${NUM_JOBs} -i __.test.runMain Elaborate -td $(BUILD_DIR) -X mverilog -ll debug
+# mill -i __.test.runMain Elaborate -td /home/shiroha/Code/Backend/ml-accelerator/build -X mverilog -ll debug
 
 # -X mverilog
 # mill -i __.test.runMain Elaborate -td $(BUILD_DIR) 

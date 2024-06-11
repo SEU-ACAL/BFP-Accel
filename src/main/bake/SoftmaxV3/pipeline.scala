@@ -55,3 +55,4 @@ class expu_divu extends Module {
 
     expdiv_divu_o.bits.sum   := hs_uint_dff(expu_divu_hs, sum_bitwidth.U,            0.U,                                                       expu_expdiv_i.bits.sum   )
 }
+
