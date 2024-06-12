@@ -1,4 +1,4 @@
-// import circt.stage._
+import circt.stage._
 
 import tb._
 

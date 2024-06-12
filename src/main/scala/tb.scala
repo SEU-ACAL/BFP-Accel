@@ -70,47 +70,47 @@
 
 // }
 
-// // class tb extends Module {    
-// //     val softmax_in  = Wire(Decoupled(new SoftMax_Input))
-// //     val div_i       = Wire(Decoupled(new Div_i))
-// //     val softmax_out = Wire(Flipped(Decoupled(new SoftMax_Output)))
+// class tb extends Module {    
+//     val softmax_in  = Wire(Decoupled(new SoftMax_Input))
+//     val div_i       = Wire(Decoupled(new Div_i))
+//     val softmax_out = Wire(Flipped(Decoupled(new SoftMax_Output)))
 
-// //     val softmax            = Module(new softmax)
-// //     val softmax_input_fp16 = Module(new softmax_input_fp16_line).io
+//     val softmax            = Module(new softmax)
+//     val softmax_input_fp16 = Module(new softmax_input_fp16_line).io
 
-// //     div_i.bits.divisor := VecInit(Seq.fill(cycle_bandwidth)(1.U(sum_bitwidth.W)))
+//     div_i.bits.divisor := VecInit(Seq.fill(cycle_bandwidth)(1.U(sum_bitwidth.W)))
 
-// //     softmax.data_in  <> softmax_in
-// //     softmax.data_out <> softmax_out
-// //     softmax.div_in   <> div_i
-// //     // ======================= FSM ==========================
-// //     // val state        = WireInit(sIdle)
-// //     val data_in_hs   = WireInit(false.B)
-// //     data_in_hs      := softmax.data_in.valid && softmax_in.ready
+//     softmax.data_in  <> softmax_in
+//     softmax.data_out <> softmax_out
+//     softmax.div_in   <> div_i
+//     // ======================= FSM ==========================
+//     // val state        = WireInit(sIdle)
+//     val data_in_hs   = WireInit(false.B)
+//     data_in_hs      := softmax.data_in.valid && softmax_in.ready
 
-// //     softmax_in.valid        := true.B
-// //     div_i.valid             := true.B
+//     softmax_in.valid        := true.B
+//     div_i.valid             := true.B
 
-// //     softmax_out.ready       := true.B
-// //     // ======================================================
+//     softmax_out.ready       := true.B
+//     // ======================================================
     
-// //     val line_num = RegInit(0.U(log2Up(datain_lines).W))
-// //     softmax_input_fp16.en       := true.B
-// //     softmax_input_fp16.line_num := line_num
+//     val line_num = RegInit(0.U(log2Up(datain_lines).W))
+//     softmax_input_fp16.en       := true.B
+//     softmax_input_fp16.line_num := line_num
     
-// //     softmax_in.bits.raw_data := softmax_input_fp16.line_data
+//     softmax_in.bits.raw_data := softmax_input_fp16.line_data
     
-// //     val first_line_flag  = RegInit(true.B) // 屎山代码
+//     val first_line_flag  = RegInit(true.B) // 屎山代码
 
-// //     when (data_in_hs && first_line_flag) { // 屎山代码
-// //         line_num                 := line_num
-// //         first_line_flag          := false.B
-// //     }.elsewhen (data_in_hs && ~first_line_flag) {
-// //         line_num                 := line_num + 1.U
-// //     }.otherwise {
-// //         line_num                 := line_num 
-// //     }    
-// // }
+//     when (data_in_hs && first_line_flag) { // 屎山代码
+//         line_num                 := line_num
+//         first_line_flag          := false.B
+//     }.elsewhen (data_in_hs && ~first_line_flag) {
+//         line_num                 := line_num + 1.U
+//     }.otherwise {
+//         line_num                 := line_num 
+//     }    
+// }
 
 
 // object tb extends App {
