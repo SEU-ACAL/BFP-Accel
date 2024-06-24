@@ -102,7 +102,7 @@ class EXP_stage(bandwidth_in: Int) extends Module {
         subuValid   := true.B
         for (i <- 0 until bandwidth_in) { 
             seu_frac_vec(i) := Mux(maxexp_expu_i.bits.exp_vec(i) =/= 0.U, ((Cat(1.U, maxexp_expu_i.bits.frac_vec(i))) >> (maxexp_expu_i.bits.max_exp - maxexp_expu_i.bits.exp_vec(i))), 
-                                (maxexp_expu_i.bits.frac_vec(i) >> (maxexp_expu_i.bits.max_exp - maxexp_expu_i.bits.exp_vec(i))))
+                                    (maxexp_expu_i.bits.frac_vec(i) >> (maxexp_expu_i.bits.max_exp - maxexp_expu_i.bits.exp_vec(i))))
             max_sign := maxexp_expu_i.bits.max_sign
             // max_exp  := maxexp_expu_i.bits.max_exp 
             max_frac := maxexp_expu_i.bits.max_frac
