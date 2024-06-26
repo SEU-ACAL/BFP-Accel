@@ -6,25 +6,32 @@ import chisel3.stage._
 
 
 object MACRO { 
+    // ==================================
+    val datain_bandwidth    = 1024
+    val cycle_bandwidth     = 32
+    val maxBatch            = datain_bandwidth / cycle_bandwidth // 最大batch数
+    val dataout_bandwidth   = cycle_bandwidth
+    val datain_lines        = 4//1024
+
     // ============ ComparatorTree ======
     val SmallTreeNums       = 6
     val SmallTreeBandwidth  = 32
     val MaxinBandwidth      = 32
 
-    val maxmem_depth        = datain_bandwidth/MaxinBandwidth
-    val maxmem_width        = MaxinBandwidth
+    //==================================
 
+    val ValueTable_size      = 128
+    val HitTable_size      = 128
+    val HitTable_bitwidth    = 10
+    // ============ AdderTree ======
+    val AdderinBitwidth      = 10
+    val HitAdderNumber       = 32 
 
-    // ==================================
-    val datain_bandwidth    = 1024
-    val cycle_bandwidth     = 64
-    val maxBatch            = datain_bandwidth / cycle_bandwidth // 最大batch数
-    val dataout_bandwidth   = cycle_bandwidth
-    val datain_lines        = 4//1024
+    //==================================
+    // ============ Div ======
+    val divin_bandwidth      = 64
 
-
-
-    val datain_bitwidth     = 16    
+    //==================================
     val dataout_bitwidth    = 16    
     val bitwidth            = 16
     val exp_bitwidth        = 5
@@ -45,7 +52,7 @@ object MACRO {
     val lut_set             = 2//8 //实际是4个
 
     val dram_width           = lut_width
-    val dram_depth           = fullSet_size / lut_width  
+    val dram_depth           = 128 / lut_width  
     val dram_bitwidth        = 16
 
     val dma_burst_len        = lut_depth / 2 // dual port

@@ -7,9 +7,9 @@ import chisel3.stage._
 import define.MACRO._
 import define.FSM._
 
-import MAX_stage._
-import EXP_stage._
-import DIV_stage._
+import max_stage._
+import exp_stage._
+import div_stage._
 import pipeline._
 
 import chisel3.util.experimental.loadMemoryFromFileInline
@@ -50,9 +50,9 @@ class softmax extends Module {
     val state  = WireInit(sIdle)
     state := fsm(data_in_hs, run_done, data_out_hs)
     // =====================================================
-    val MAX_stage_inst    = Module(new MAX_stage(bandwidth_in = datain_bandwidth, bandwidth_out = cycle_bandwidth))
-    val EXP_stage_inst    = Module(new EXP_stage(bandwidth_in = cycle_bandwidth))
-    val DIV_stage_inst    = Module(new DIV_stage(bandwidth_in = cycle_bandwidth))
+    val MAX_stage_inst    = Module(new max_stage(bandwidth_in = datain_bandwidth, bandwidth_out = cycle_bandwidth))
+    val EXP_stage_inst    = Module(new exp_stage(bandwidth_in = cycle_bandwidth,  bandwidth_out = cycle_bandwidth))
+    val DIV_stage_inst    = Module(new div_stage(bandwidth_in = cycle_bandwidth,  bandwidth_out = cycle_bandwidth))
 
     val OUT_inst          = Module(new outu)
 
@@ -119,11 +119,11 @@ class outu extends Module {
     
     when (divu_outu_i.valid) {
         // for (i <- 0 until dataout_bandwidth) {
-            outu_o.valid        := true.B
+            outu_o.valid         := true.B
             outu_o.bits.res_data := divu_outu_i.bits.res_data
         // }
     }.otherwise {
-        outu_o.valid        := false.B
+        outu_o.valid         := false.B
         outu_o.bits.res_data := VecInit(Seq.fill(cycle_bandwidth)(0.U(bitwidth.W)))
     }
 
