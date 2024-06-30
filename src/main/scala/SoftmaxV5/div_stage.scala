@@ -24,23 +24,23 @@ class div_o extends Bundle {
 
 class div_stage (bandwidth_in: Int) extends Module {
     val expdiv_divu_i  = IO(Flipped(Decoupled(new exp_div)))
-    val divu_o         = IO(Decoupled(new div_o))
+    val divu_o         = IO(Valid(new div_o))
 
     // ======================= FSM ==========================
-    val data_in_hs  = WireInit(false.B)
-    val data_out_hs = WireInit(false.B)
+    // val data_in_hs  = WireInit(false.B)
+    // val data_out_hs = WireInit(false.B)
 
-    val dataoutEnd = RegInit(false.B)
+    // val dataoutEnd = RegInit(false.B)
 
     expdiv_divu_i.ready  := true.B
 
-    data_in_hs  := expdiv_divu_i.valid && expdiv_divu_i.ready
-    data_out_hs := divu_o.valid && divu_o.ready
+    // data_in_hs  := expdiv_divu_i.valid && expdiv_divu_i.ready
+    // data_out_hs := divu_o.valid && divu_o.ready
 
-    val state  = WireInit(sIdle)
-    state := fsm(data_in_hs, data_out_hs, dataoutEnd)
+    // val state  = WireInit(sIdle)
+    // state := fsm(data_in_hs, data_out_hs, dataoutEnd)
 
-    CycleCounter(state === sRun, state === sIdle, 2)
+    // CycleCounter(state === sRun, state === sIdle, 2)
     // =====================================================
     // ======================== sign ============================
     val sign_o = RegInit(0.U(1.W))
@@ -53,63 +53,65 @@ class div_stage (bandwidth_in: Int) extends Module {
     val frac_o      = RegInit(VecInit(Seq.fill(cycle_bandwidth)(0.U(frac_bitwidth.W))))
     
     data_frac_w := expdiv_divu_i.bits.data_frac
-    
-    for (i <- 0 until cycle_bandwidth) {
-        frac_o(i) := Lookup(expdiv_divu_i.bits.sum_frac(9, 5), 0.U, Seq(
-            BitPat("b00000??") -> (data_frac_w(i) >> 0.U + data_frac_w(i) >> 0.U + data_frac_w(i) >>  0.U + data_frac_w(i) >>  0.U),
-            BitPat("b00000??") -> (data_frac_w(i) >> 0.U + data_frac_w(i) >> 0.U + data_frac_w(i) >>  0.U + data_frac_w(i) >>  0.U),
-            BitPat("b00001??") -> (data_frac_w(i) >> 1.U + data_frac_w(i) >> 2.U + data_frac_w(i) >>  3.U + data_frac_w(i) >>  4.U),
-            BitPat("b00010??") -> (data_frac_w(i) >> 1.U + data_frac_w(i) >> 2.U + data_frac_w(i) >>  3.U + data_frac_w(i) >>  4.U),
-            BitPat("b00011??") -> (data_frac_w(i) >> 1.U + data_frac_w(i) >> 2.U + data_frac_w(i) >>  3.U + data_frac_w(i) >>  5.U),
-            BitPat("b00100??") -> (data_frac_w(i) >> 1.U + data_frac_w(i) >> 2.U + data_frac_w(i) >>  3.U + data_frac_w(i) >>  7.U),
-            BitPat("b00101??") -> (data_frac_w(i) >> 1.U + data_frac_w(i) >> 2.U + data_frac_w(i) >>  4.U + data_frac_w(i) >>  5.U),
-            BitPat("b00110??") -> (data_frac_w(i) >> 1.U + data_frac_w(i) >> 2.U + data_frac_w(i) >>  4.U + data_frac_w(i) >>  6.U),
-            BitPat("b00111??") -> (data_frac_w(i) >> 1.U + data_frac_w(i) >> 2.U + data_frac_w(i) >>  4.U + data_frac_w(i) >>  7.U),
-            BitPat("b01000??") -> (data_frac_w(i) >> 1.U + data_frac_w(i) >> 2.U + data_frac_w(i) >>  5.U + data_frac_w(i) >>  6.U),
-            BitPat("b01001??") -> (data_frac_w(i) >> 1.U + data_frac_w(i) >> 2.U + data_frac_w(i) >>  6.U + data_frac_w(i) >>  7.U),
-            BitPat("b01010??") -> (data_frac_w(i) >> 1.U + data_frac_w(i) >> 2.U + data_frac_w(i) >>  7.U + data_frac_w(i) >>  8.U),
-            BitPat("b01011??") -> (data_frac_w(i) >> 1.U + data_frac_w(i) >> 3.U + data_frac_w(i) >>  4.U + data_frac_w(i) >>  5.U),
-            BitPat("b01100??") -> (data_frac_w(i) >> 1.U + data_frac_w(i) >> 3.U + data_frac_w(i) >>  4.U + data_frac_w(i) >>  5.U),
-            BitPat("b01101??") -> (data_frac_w(i) >> 1.U + data_frac_w(i) >> 3.U + data_frac_w(i) >>  4.U + data_frac_w(i) >>  6.U),
-            BitPat("b01110??") -> (data_frac_w(i) >> 1.U + data_frac_w(i) >> 3.U + data_frac_w(i) >>  4.U + data_frac_w(i) >>  7.U),
-            BitPat("b01111??") -> (data_frac_w(i) >> 1.U + data_frac_w(i) >> 3.U + data_frac_w(i) >>  5.U + data_frac_w(i) >>  6.U),
-            BitPat("b10000??") -> (data_frac_w(i) >> 1.U + data_frac_w(i) >> 3.U + data_frac_w(i) >>  5.U + data_frac_w(i) >>  7.U),
-            BitPat("b10001??") -> (data_frac_w(i) >> 1.U + data_frac_w(i) >> 3.U + data_frac_w(i) >>  6.U + data_frac_w(i) >>  7.U),
-            BitPat("b10010??") -> (data_frac_w(i) >> 1.U + data_frac_w(i) >> 3.U + data_frac_w(i) >>  7.U + data_frac_w(i) >>  8.U),
-            BitPat("b10011??") -> (data_frac_w(i) >> 1.U + data_frac_w(i) >> 3.U + data_frac_w(i) >>  9.U + data_frac_w(i) >> 11.U),
-            BitPat("b10100??") -> (data_frac_w(i) >> 1.U + data_frac_w(i) >> 4.U + data_frac_w(i) >>  5.U + data_frac_w(i) >>  6.U),
-            BitPat("b10101??") -> (data_frac_w(i) >> 1.U + data_frac_w(i) >> 4.U + data_frac_w(i) >>  5.U + data_frac_w(i) >>  7.U),
-            BitPat("b10110??") -> (data_frac_w(i) >> 1.U + data_frac_w(i) >> 4.U + data_frac_w(i) >>  6.U + data_frac_w(i) >>  7.U),
-            BitPat("b10111??") -> (data_frac_w(i) >> 1.U + data_frac_w(i) >> 4.U + data_frac_w(i) >>  6.U + data_frac_w(i) >>  9.U),
-            BitPat("b11000??") -> (data_frac_w(i) >> 1.U + data_frac_w(i) >> 4.U + data_frac_w(i) >>  7.U + data_frac_w(i) >> 10.U),
-            BitPat("b11001??") -> (data_frac_w(i) >> 1.U + data_frac_w(i) >> 5.U + data_frac_w(i) >>  6.U + data_frac_w(i) >>  7.U),
-            BitPat("b11010??") -> (data_frac_w(i) >> 1.U + data_frac_w(i) >> 5.U + data_frac_w(i) >>  6.U + data_frac_w(i) >>  8.U),
-            BitPat("b11011??") -> (data_frac_w(i) >> 1.U + data_frac_w(i) >> 5.U + data_frac_w(i) >>  7.U + data_frac_w(i) >>  9.U),
-            BitPat("b11100??") -> (data_frac_w(i) >> 1.U + data_frac_w(i) >> 5.U + data_frac_w(i) >>  9.U + data_frac_w(i) >> 11.U),
-            BitPat("b11101??") -> (data_frac_w(i) >> 1.U + data_frac_w(i) >> 6.U + data_frac_w(i) >>  7.U + data_frac_w(i) >> 10.U),
-            BitPat("b11110??") -> (data_frac_w(i) >> 1.U + data_frac_w(i) >> 6.U + data_frac_w(i) >> 11.U + data_frac_w(i) >> 11.U),
-            BitPat("b11111??") -> (data_frac_w(i) >> 1.U + data_frac_w(i) >> 7.U + data_frac_w(i) >> 11.U + data_frac_w(i) >> 11.U)
-        ))
+    val shiftLookup = ListLookup(expdiv_divu_i.bits.sum_frac(9, 5), List(0.U, 0.U, 0.U, 0.U), Array(
+            BitPat("b00000") -> List( 0.U,  0.U,  0.U,  0.U),
+            BitPat("b00001") -> List( 1.U,  2.U,  3.U,  4.U),
+            BitPat("b00010") -> List( 1.U,  2.U,  3.U,  4.U),
+            BitPat("b00011") -> List( 1.U,  2.U,  3.U,  5.U),
+            BitPat("b00100") -> List( 1.U,  2.U,  3.U,  7.U),
+            BitPat("b00101") -> List( 1.U,  2.U,  4.U,  5.U),
+            BitPat("b00110") -> List( 1.U,  2.U,  4.U,  6.U),
+            BitPat("b00111") -> List( 1.U,  2.U,  4.U,  7.U),
+            BitPat("b01000") -> List( 1.U,  2.U,  5.U,  6.U),
+            BitPat("b01001") -> List( 1.U,  2.U,  6.U,  7.U),
+            BitPat("b01010") -> List( 1.U,  2.U,  7.U,  8.U),
+            BitPat("b01011") -> List( 1.U,  3.U,  4.U,  5.U),
+            BitPat("b01100") -> List( 1.U,  3.U,  4.U,  5.U),
+            BitPat("b01101") -> List( 1.U,  3.U,  4.U,  6.U),
+            BitPat("b01110") -> List( 1.U,  3.U,  4.U,  7.U),
+            BitPat("b01111") -> List( 1.U,  3.U,  5.U,  6.U),
+            BitPat("b10000") -> List( 1.U,  3.U,  5.U,  7.U),
+            BitPat("b10001") -> List( 1.U,  3.U,  6.U,  7.U),
+            BitPat("b10010") -> List( 1.U,  3.U,  7.U,  8.U),
+            BitPat("b10011") -> List( 1.U,  3.U,  9.U, 11.U),
+            BitPat("b10100") -> List( 1.U,  4.U,  5.U,  6.U),
+            BitPat("b10101") -> List( 1.U,  4.U,  5.U,  7.U),
+            BitPat("b10110") -> List( 1.U,  4.U,  6.U,  7.U),
+            BitPat("b10111") -> List( 1.U,  4.U,  6.U,  9.U),
+            BitPat("b11000") -> List( 1.U,  4.U,  7.U, 10.U),
+            BitPat("b11001") -> List( 1.U,  5.U,  6.U,  7.U),
+            BitPat("b11010") -> List( 1.U,  5.U,  6.U,  8.U),
+            BitPat("b11011") -> List( 1.U,  5.U,  7.U,  9.U),
+            BitPat("b11100") -> List( 1.U,  5.U,  9.U, 11.U),
+            BitPat("b11101") -> List( 1.U,  6.U,  7.U, 10.U),
+            BitPat("b11110") -> List( 1.U,  6.U, 11.U, 11.U),
+            BitPat("b11111") -> List( 1.U,  7.U, 11.U, 11.U)
+        )
+    )
+
+    def calculate(data: UInt, shifts: List[UInt]): UInt = {
+        (data >> shifts(0)) + 
+        (data >> shifts(1)) + 
+        (data >> shifts(2)) + 
+        (data >> shifts(3))
     }
 
-
-
-
-
+    for (i <- 0 until cycle_bandwidth) {
+        frac_o(i) := calculate(data_frac_w(i), shiftLookup)
+    }
 
     // ======================== Output ==========================
-    when (state === sRun) {
-        divu_o.valid := true.B
-        for (i <- 0 until cycle_bandwidth) {
+
+    val dataoutValid = RegInit(false.B)
+
+    dataoutValid := expdiv_divu_i.valid 
+    
+    divu_o.valid        := dataoutValid
+    when (divu_o.valid) { 
+        for (i <- 0 until cycle_bandwidth) { 
             divu_o.bits.data_o(i) := Cat(sign_o, exp_o, frac_o(i))
         }
-    }.otherwise {
-        divu_o.valid          := false.B
-        divu_o.bits.data_o := VecInit(Seq.fill(cycle_bandwidth)(0.U(bitwidth.W))) 
+    }.otherwise { 
+        divu_o.bits.data_o := VecInit(Seq.fill(cycle_bandwidth)(0.U(bitwidth.W)))
     }
-
-    val counter     = RegInit(0.U(8.W))  
-    counter        := Mux(expdiv_divu_i.valid, 0.U, counter + 1.U)
-
-    dataoutEnd := counter === 31.U
 }

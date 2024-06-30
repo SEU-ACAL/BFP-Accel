@@ -24,7 +24,7 @@ object MACRO {
     val HitTable_size      = 128
     val HitTable_bitwidth    = 10
     // ============ AdderTree ======
-    val AdderinBitwidth      = 10
+    val AdderinBitwidth      = 12
     val HitAdderNumber       = 32 
 
     //==================================

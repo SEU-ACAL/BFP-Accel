@@ -45,7 +45,7 @@ class max_stage(bandwidth_in: Int, bandwidth_out: Int) extends Module {
     comparator.in.bits.data_in   := maxu_i.bits.raw_data
 
     // 记录前32次比较树的结果
-    when (comparator.out.valid) { max_buffer(max_buffer_point)  := comparator.out.bits.max_out} // 关键路径在这
+    when (comparator.out.valid && comparator.out.bits.batch_num =/= maxBatch.U) { max_buffer(max_buffer_point)  := comparator.out.bits.max_out} // 关键路径在这
     //when (comparator.out.valid) { 
     //     max_buffer(max_buffer_point)  := comparator.out.bits.max_out
     // } // 关键路径在这
