@@ -1,4 +1,4 @@
-package MAX_stage
+package max_stage
 
 import chisel3._
 import chisel3.util._
@@ -11,95 +11,61 @@ import define.test._
 import pipeline._
 
 
-
 class max_input extends Bundle { 
-    val raw_data    = Vec(datain_bandwidth, UInt(bitwidth.W))
+    val raw_data    = Vec(cycle_bandwidth, UInt(bitwidth.W))
+    val batch_num   = UInt(9.W)
 }
 
-class max_out extends Bundle { 
-    val data_out   = UInt(bitwidth.W) // 落在无效区间，结果为统一的固定值
-}
 
-class max_exp extends Bundle { 
-    val max_sign  = UInt(1.W)
-    val max_exp   = UInt(exp_bitwidth.W)
-    val max_frac  = UInt(frac_bitwidth.W)
-}
+class max_exp extends Bundle { val max  = UInt(bitwidth.W)}
 
-class tb(bandwidth_in: Int, bandwidth_out: Int) extends Module {
+
+class max_stage(bandwidth_in: Int, bandwidth_out: Int) extends Module {
     val maxu_i        = IO(Flipped(Decoupled(new max_input)))
     val maxu_maxexp_o = IO(Decoupled(new max_exp))
-    // val maxu_outu_o   = IO(Valid(new max_out))
 
-    val CompareDone   = WireInit(false.B)
-    val MaxmemEmpty   = WireInit(false.B)
+    val FirstStageCompareDone   = WireInit(false.B)
+    val SecondStageCompareDone  = WireInit(false.B)
 
     // ======================= FSM ==========================
-    val state              = WireInit(sIdle)
-    val maxu_i_hs          = maxu_i.ready && maxu_i.valid
-    val maxu_maxexp_o_hs   = maxu_maxexp_o.ready && maxu_maxexp_o.valid
-    // val maxu_outu_o_hs     = maxu_outu_o.ready && maxu_outu_o.valid
-    state := fsm(maxu_i_hs, CompareDone, MaxmemEmpty)
+    // val state              = WireInit(sIdle)
+    // val maxu_i_hs          = maxu_i.ready && maxu_i.valid
+    // val maxu_maxexp_o_hs   = maxu_maxexp_o.ready && maxu_maxexp_o.valid
+    // state := fsm(maxu_i_hs, FirstStageCompareDone, SecondStageCompareDone)
 
-    maxu_i.ready         := state === sIdle
-    CycleCounter(state === sRun, state === sIdle, 1)
+    maxu_i.ready         := true.B
+    // CycleCounter(state === sRun, state === sIdle, 1)
     // ======================================================
-    val counter     = RegInit(0.U(8.W))  
-    counter        := Mux(maxu_i_hs, counter + 1.U, 0.U)
-
-    val max_buffer  = RegInit(VecInit(Seq.fill(32)(0.U(bitwidth.W))))
-    val buffer_idx  = RegInit(0.U(log2Up(maxBatch).W))
-    // ===================== 小树比较 ============
-    val arbiter   = Module(new RRArbiter(MaxinBandwidth, SmallTreeNums, SmallTreeBandwidth)).io
-    arbiter.en   := maxu_i.valid
-    // arbiter.data_in.bits    := maxu_i.bits.raw_data
-
-    val comparators = Seq.fill(SmallTreeNums)(Module(new SmallComparatorTree32bit()).io)
-
-    for (i <- 0 until SmallTreeNums) {
-        comparators(i).in.valid := Mux(maxu_i_hs & arbiter.rid.bits === i.U, arbiter.rid.valid, false.B)
-        comparators(i).in.bits  := maxu_i.bits.raw_data
-
-    }
+    val max_buffer        = RegInit(VecInit(Seq.fill(32)(0.U(bitwidth.W))))
+    val max_buffer_point  = RegInit(0.U(log2Up(maxBatch).W))
+    // ===================== 流水线比较 ============
+    val comparator = Module(new ComparatorTree32bit).io
+    comparator.in.valid          := maxu_i.valid
+    comparator.in.bits.batch_num := maxu_i.bits.batch_num
+    comparator.in.bits.data_in   := maxu_i.bits.raw_data
 
     // 记录前32次比较树的结果
-    for (i <- 0 until SmallTreeNums) {
-        when (comparators(i).out.valid) {
-            max_buffer(buffer_idx)  := comparators(i).out.bits
-            buffer_idx              := buffer_idx + 1.U
-        }
-    }
+    when (comparator.out.valid && comparator.out.bits.batch_num =/= maxBatch.U) { max_buffer(max_buffer_point)  := comparator.out.bits.max_out} // 关键路径在这
+    //when (comparator.out.valid) { 
+    //     max_buffer(max_buffer_point)  := comparator.out.bits.max_out
+    // } // 关键路径在这
+    // max_buffer_point := Mux(comparator.out.valid, max_buffer_point + 1.U, 
+    //                         Mux(max_buffer_point === maxBatch.U, 0.U, max_buffer_point))
     // ============== 小树合一 =================
-    
-    when (counter === 31.U) { // 开启小树归一
-        comparators(0).in.valid := true.B
-        comparators(0).in.bits  := max_buffer
+    FirstStageCompareDone  := comparator.out.valid && (comparator.out.bits.batch_num === maxBatch.U - 1.U)
+    when (FirstStageCompareDone) {
+        comparator.in.valid          := true.B
+        comparator.in.bits.batch_num := 32.U
+        comparator.in.bits.data_in   := max_buffer
     }
-    
-    when (counter === 36.U) {
-        CompareDone := true.B
-    }.otherwise { 
-        CompareDone := false.B
-    }
-
-    val max_reg  = RegInit(0.U(bitwidth.W))  
-    when (CompareDone) {
-        max_reg := comparators(0).out.bits 
-    }
-
     // ============== 输出 =================
-    when (state === sDone) {
-        maxu_maxexp_o.valid          := true.B
-        maxu_maxexp_o.bits.max_sign  := max_reg(15)    
-        maxu_maxexp_o.bits.max_exp   := max_reg(14, 10)
-        maxu_maxexp_o.bits.max_frac  := max_reg(9, 0)  
-        maxu_maxexp_o.bits.batch_num := 0.U
+    SecondStageCompareDone := comparator.out.valid && (comparator.out.bits.batch_num === maxBatch.U)
+    when (SecondStageCompareDone) {
+        maxu_maxexp_o.valid      := true.B
+        maxu_maxexp_o.bits.max   := comparator.out.bits.max_out
     }.otherwise {
-        maxu_maxexp_o.valid          := false.B
-        maxu_maxexp_o.bits.max_sign  := 0.U    
-        maxu_maxexp_o.bits.max_exp   := 0.U
-        maxu_maxexp_o.bits.max_frac  := 0.U
-        maxu_maxexp_o.bits.batch_num := 0.U
+        maxu_maxexp_o.valid      := false.B
+        maxu_maxexp_o.bits.max   := 0.U
     }
 }
 
@@ -120,58 +86,101 @@ class ComparatorFP16 (bitwidth: Int) extends Module {
     io.max := Mux(AGreaterThanB, fpA, fpB)
 }
 
-// 小比较树
+// 小比较树层
 class SmallComparatorTreeLevel (SmallTreeBandwidth: Int) extends Module {
     val io = IO(new Bundle {
-        val in  = Input(Vec(SmallTreeBandwidth, UInt(bitwidth.W)))
-        val out = Output(Vec(SmallTreeBandwidth/2, UInt(bitwidth.W)))
+        val in  = Flipped(Valid(new Bundle {
+                            val data_in   = Vec(SmallTreeBandwidth, UInt(bitwidth.W))
+                            val batch_num = UInt(9.W)}))
+        val out = Valid(new Bundle {
+                            val max_out   =  Vec(SmallTreeBandwidth/2, UInt(bitwidth.W))
+                            val batch_num = UInt(9.W)})
     })
     val comparators = Seq.fill(SmallTreeBandwidth/2)(Module(new ComparatorFP16(16)))
     for (i <- 0 until SmallTreeBandwidth/2) {
-        comparators(i).io.in := VecInit(io.in(i * 2), io.in(i * 2 + 1))
-        io.out(i)            := comparators(i).io.max
+        comparators(i).io.in   := VecInit(io.in.bits.data_in(i * 2), io.in.bits.data_in(i * 2 + 1))
+        io.out.bits.max_out(i) := comparators(i).io.max
     }
+    io.out.valid          := io.in.valid
+    io.out.bits.batch_num := io.in.bits.batch_num
 }
 
-// 小比较树
-class SmallComparatorTree32bit extends Module {
+
+// class ComparatorPipline_i extends Bundle { 
+//     val data_in   = Vec(32, UInt(bitwidth.W))
+//     val batch_num = UInt(9.W)
+// }
+
+// class ComparatorPipline_o extends Bundle { 
+//     val max_out   = UInt(bitwidth.W)
+//     val batch_num = UInt(9.W)
+// }
+
+// 比较树
+class ComparatorTree32bit extends Module {
     val io = IO(new Bundle {
-        val in  = Flipped(Valid(Vec(32, UInt(bitwidth.W))))
-        val out = Valid(UInt(bitwidth.W))
+        val in  = Flipped(Valid(new Bundle {
+                            val data_in   = Vec(32, UInt(bitwidth.W))
+                            val batch_num = UInt(9.W)}))
+        val out = Valid(new Bundle {
+                            val max_out   = UInt(bitwidth.W)
+                            val batch_num = UInt(9.W)})
     })
     val TreeLevel1 = Module(new SmallComparatorTreeLevel(32)).io
-    TreeLevel1.in := io.in.bits
+    TreeLevel1.in.valid          := io.in.valid
+    TreeLevel1.in.bits.data_in   := io.in.bits.data_in
+    TreeLevel1.in.bits.batch_num := io.in.bits.batch_num
+
+    val TreeLevel1_out_valid     = RegInit(false.B)
+    val TreeLevel1_out_max_out   = RegInit(VecInit(Seq.fill(16)(0.U(bitwidth.W))))
+    val TreeLevel1_out_batch_num = RegInit(0.U(9.W))
+    TreeLevel1_out_valid     := TreeLevel1.out.valid
+    TreeLevel1_out_max_out   := TreeLevel1.out.bits.max_out
+    TreeLevel1_out_batch_num := TreeLevel1.out.bits.batch_num 
+
 
     val TreeLevel2 = Module(new SmallComparatorTreeLevel(16)).io
-    TreeLevel2.in := TreeLevel1.out
+    TreeLevel2.in.valid          := TreeLevel1_out_valid     
+    TreeLevel2.in.bits.data_in   := TreeLevel1_out_max_out   
+    TreeLevel2.in.bits.batch_num := TreeLevel1_out_batch_num 
+
+    val TreeLevel2_out_valid     = RegInit(false.B)
+    val TreeLevel2_out_max_out   = RegInit(VecInit(Seq.fill(8)(0.U(bitwidth.W))))
+    val TreeLevel2_out_batch_num = RegInit(0.U(9.W))
+    TreeLevel2_out_valid     := TreeLevel2.out.valid
+    TreeLevel2_out_max_out   := TreeLevel2.out.bits.max_out
+    TreeLevel2_out_batch_num := TreeLevel2.out.bits.batch_num 
     
     val TreeLevel3 = Module(new SmallComparatorTreeLevel(8)).io
-    TreeLevel3.in := TreeLevel2.out
-    
+    TreeLevel3.in.valid          := TreeLevel2_out_valid
+    TreeLevel3.in.bits.data_in   := TreeLevel2_out_max_out
+    TreeLevel3.in.bits.batch_num := TreeLevel2_out_batch_num 
+
+    val TreeLevel3_out_valid     = RegInit(false.B)
+    val TreeLevel3_out_max_out   = RegInit(VecInit(Seq.fill(4)(0.U(bitwidth.W))))
+    val TreeLevel3_out_batch_num = RegInit(0.U(9.W))
+    TreeLevel3_out_valid     := TreeLevel3.out.valid
+    TreeLevel3_out_max_out   := TreeLevel3.out.bits.max_out
+    TreeLevel3_out_batch_num := TreeLevel3.out.bits.batch_num 
+
     val TreeLevel4 = Module(new SmallComparatorTreeLevel(4)).io
-    TreeLevel4.in := TreeLevel3.out
+    TreeLevel4.in.valid          := TreeLevel3_out_valid    
+    TreeLevel4.in.bits.data_in   := TreeLevel3_out_max_out  
+    TreeLevel4.in.bits.batch_num := TreeLevel3_out_batch_num
+
+    val TreeLevel4_out_valid     = RegInit(false.B)
+    val TreeLevel4_out_max_out   = RegInit(VecInit(Seq.fill(2)(0.U(bitwidth.W))))
+    val TreeLevel4_out_batch_num = RegInit(0.U(9.W))
+    TreeLevel4_out_valid     := TreeLevel4.out.valid
+    TreeLevel4_out_max_out   := TreeLevel4.out.bits.max_out
+    TreeLevel4_out_batch_num := TreeLevel4.out.bits.batch_num 
     
     val TreeLevel5 = Module(new SmallComparatorTreeLevel(2)).io
-    TreeLevel5.in := TreeLevel4.out
+    TreeLevel5.in.valid          := TreeLevel4_out_valid    
+    TreeLevel5.in.bits.data_in   := TreeLevel4_out_max_out  
+    TreeLevel5.in.bits.batch_num := TreeLevel4_out_batch_num
 
-    val counter     = RegInit(0.U(8.W))  
-    counter        := Mux(io.in.valid, 0.U, counter + 1.U)
-
-    io.out.valid    := counter === 3.U
-    io.out.bits     := TreeLevel5.out(0)
-}
-
-class RRArbiter (MaxinBandwidth: Int, ComparatorTreeNums: Int, UseComparatorTreeTimes: Int)  extends Module {
-    val io = IO(new Bundle{
-        // val data_in  = Flipped(Valid(Vec(MaxinBandwidth, UInt(bitwidth.W))))
-        val en  = Input(Bool())
-        val rid = Valid(UInt(log2Up(ComparatorTreeNums).W))
-        // val data_out = Valid(Vec(MaxinBandwidth, UInt(bitwidth.W)))
-    })
-    val rid  = RegInit(0.U(log2Up(ComparatorTreeNums).W))
-    rid    := Mux(~io.en, rid, 
-                Mux(rid === ComparatorTreeNums.U, 0.U, rid + 1.U))
-
-    io.rid.bits             := rid   
-    io.rid.valid            := io.en   
+    io.out.valid            := TreeLevel5.out.valid
+    io.out.bits.max_out     := TreeLevel5.out.bits.max_out(0)
+    io.out.bits.batch_num   := TreeLevel5.out.bits.batch_num
 }
