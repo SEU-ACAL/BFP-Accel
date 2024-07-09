@@ -6,7 +6,7 @@ export PATH := $(PATH):$(abspath ./utils)
 NUM_JOBs = 256
 
 # ========= verilator ==============
-TOPNAME = tb
+TOPNAME = top
 INC_PATH ?= ${PWD}/src/csrc/include \
 			/usr/lib/llvm-11/include # for disasm 
 

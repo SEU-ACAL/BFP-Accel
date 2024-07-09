@@ -50,40 +50,27 @@ class softmax extends Module {
     val state  = WireInit(sIdle)
     state := fsm(data_in_hs, run_done, data_out_hs)
     // =====================================================
-    val MAX_stage_inst    = Module(new max_stage(bandwidth_in = datain_bandwidth, bandwidth_out = cycle_bandwidth))
-    val EXP_stage_inst    = Module(new exp_stage(bandwidth_in = cycle_bandwidth,  bandwidth_out = cycle_bandwidth))
-    val DIV_stage_inst    = Module(new div_stage(bandwidth_in = cycle_bandwidth,  bandwidth_out = cycle_bandwidth))
+    val MAX_stage_inst    = Module(new max_stage(bandwidth_in = cycle_bandwidth, bandwidth_out = cycle_bandwidth))
+    val EXP_stage_inst    = Module(new exp_stage(bandwidth_in = cycle_bandwidth, bandwidth_out = cycle_bandwidth))
+    val DIV_stage_inst    = Module(new div_stage(bandwidth_in = cycle_bandwidth, bandwidth_out = cycle_bandwidth))
 
-    val OUT_inst          = Module(new outu)
-
-    val maxu_expu_inst     = Module(new maxu_expu   )// .io 
-    val expu_divu_inst     = Module(new expu_divu    )// .io 
+    val maxu_expu_inst     = Module(new maxu_expu)// .io 
+    val expu_divu_inst     = Module(new expu_divu)// .io 
     
-
-
     // ================== max_stage ==========================
-    // val test = RegInit(0.U(16.W))
-    // test :=  data_in.bits.raw_data(0)
-    // printf("%d ", test)
-    
     MAX_stage_inst.maxu_i                  <> data_in
 
-    MAX_stage_inst.maxu_maxexp_o          <> maxu_expu_inst.maxu_maxexp_i
-    // maxu_expu_inst.maxexp_expu_o.ready := true.B
+    MAX_stage_inst.maxu_maxexp_o           <> maxu_expu_inst.maxu_maxexp_i
     EXP_stage_inst.maxexp_expu_i           <> maxu_expu_inst.maxexp_expu_o 
 
     
-    // ================== EXP_stage ==========================
-
-    
+    // ================== EXP_stage ==========================    
     EXP_stage_inst.expu_expdiv_o <> expu_divu_inst.expu_expdiv_i 
     DIV_stage_inst.expdiv_div_i  <> expu_divu_inst.expdiv_divu_o
     
     
     // ================== DIV_stage ==========================
     DIV_stage_inst.divisor_i       <> div_in   
-
-
 
 
     // ================== outu =============================

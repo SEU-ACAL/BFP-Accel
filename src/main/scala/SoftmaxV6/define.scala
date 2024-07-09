@@ -6,57 +6,81 @@ import chisel3.stage._
 
 
 object MACRO { 
-    // ============ ComparatorTree ======
-    val SmallTreeNums       = 6
-    val SmallTreeBandwidth  = 32
-    val MaxinBandwidth      = 32
-
-    val maxmem_depth        = datain_bandwidth/MaxinBandwidth
-    val maxmem_width        = MaxinBandwidth
-
-
-    // ==================================
-    val datain_bandwidth    = 1024
-    val cycle_bandwidth     = 64
-    val maxBatch            = datain_bandwidth / cycle_bandwidth // 最大batch数
-    val dataout_bandwidth   = cycle_bandwidth
-    val datain_lines        = 4//1024
-
-
-
-    val datain_bitwidth     = 16    
-    val dataout_bitwidth    = 16    
-    val bitwidth            = 16
-    val exp_bitwidth        = 5
-    val frac_bitwidth       = 10
-    val expvalue_bitwidth   = 16
+    // =============== MAXU 
     
-    val lutidx_bitwidth    = 8
+    // =============== EXPU
+    val sum_bitwidth            = 16
 
-    val partSet_size       = 256 // 有多少个数
-    val partSet_num        = 17 // 有多少个小表
-    val fullSet_size       = partSet_size * partSet_num // 除去underflow和overflower一共17个set可用
+    val idx_bitwidth            = 5 // 取五位做索引 
+    val rate_bitwidth           = 5 // 取五位做插值
 
-    val dram_set             = 2 //实际是1个
+    val lut_bandwidth           = 256
+    val lut_datawidth           = 16
 
-    val lut_width           = 8
-    val lut_depth           = partSet_size / lut_width / dram_set // set数翻倍了，lut深度折半了
-    val lut_bitwidth        = 16
-    val lut_set             = 2//8 //实际是4个
+    val AdderinBitwidth         = 16
+    val dataout_bitwidth        = 16
 
-    val dram_width           = lut_width
-    val dram_depth           = fullSet_size / lut_width  
-    val dram_bitwidth        = 16
+    // =============== top
+    val datain_bandwidth        = 1024
+    val cycle_bandwidth         = 64
+    val maxBatch                = datain_bandwidth / cycle_bandwidth // 最大batch数
 
-    val dma_burst_len        = lut_depth / 2 // dual port
-    val bus_width            = lut_width * lut_bitwidth
+    // ============== global
+    val bitwidth                = 16
+    val exp_bitwidth            = 5
+    val frac_bitwidth           = 10
+    val expvalue_bitwidth       = 16
+    // // ============ ComparatorTree ======
+    // val SmallTreeNums       = 6
+    // val SmallTreeBandwidth  = 32
+    // val MaxinBandwidth      = 32
 
-    val underflow_threshold = 11     // 0~11
-    val overflow_threshold  = 28    // 28~30
+    // val maxmem_depth        = datain_bandwidth/MaxinBandwidth
+    // val maxmem_width        = MaxinBandwidth
 
-    val sum_bitwidth        = 16
 
-    val numElements         = datain_bandwidth
+    // // ==================================
+    // val datain_bandwidth    = 1024
+    // val cycle_bandwidth     = 64
+    // val maxBatch            = datain_bandwidth / cycle_bandwidth // 最大batch数
+    // val dataout_bandwidth   = cycle_bandwidth
+    // val datain_lines        = 4//1024
+
+
+
+    // val datain_bitwidth     = 16    
+    // val dataout_bitwidth    = 16    
+    // val bitwidth            = 16
+    // val exp_bitwidth        = 5
+    // val frac_bitwidth       = 10
+    // val expvalue_bitwidth   = 16
+    
+    // val lutidx_bitwidth    = 8
+
+    // val partSet_size       = 256 // 有多少个数
+    // val partSet_num        = 17 // 有多少个小表
+    // val fullSet_size       = partSet_size * partSet_num // 除去underflow和overflower一共17个set可用
+
+    // val dram_set             = 2 //实际是1个
+
+    // val lut_width           = 8
+    // val lut_depth           = partSet_size / lut_width / dram_set // set数翻倍了，lut深度折半了
+    // val lut_bitwidth        = 16
+    // val lut_set             = 2//8 //实际是4个
+
+    // val dram_width           = lut_width
+    // val dram_depth           = fullSet_size / lut_width  
+    // val dram_bitwidth        = 16
+
+    // val dma_burst_len        = lut_depth / 2 // dual port
+    // val bus_width            = lut_width * lut_bitwidth
+
+    // val underflow_threshold = 11     // 0~11
+    // val overflow_threshold  = 28    // 28~30
+
+    // val sum_bitwidth        = 16
+
+    // val numElements         = datain_bandwidth
 }
 
 class FSM extends Module {

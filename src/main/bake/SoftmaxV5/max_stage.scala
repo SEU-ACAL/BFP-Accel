@@ -28,13 +28,7 @@ class max_stage(bandwidth_in: Int, bandwidth_out: Int) extends Module {
     val SecondStageCompareDone  = WireInit(false.B)
 
     // ======================= FSM ==========================
-    // val state              = WireInit(sIdle)
-    // val maxu_i_hs          = maxu_i.ready && maxu_i.valid
-    // val maxu_maxexp_o_hs   = maxu_maxexp_o.ready && maxu_maxexp_o.valid
-    // state := fsm(maxu_i_hs, FirstStageCompareDone, SecondStageCompareDone)
-
     maxu_i.ready         := true.B
-    // CycleCounter(state === sRun, state === sIdle, 1)
     // ======================================================
     val max_buffer        = RegInit(VecInit(Seq.fill(32)(0.U(bitwidth.W))))
     val max_buffer_point  = RegInit(0.U(log2Up(maxBatch).W))
@@ -45,12 +39,7 @@ class max_stage(bandwidth_in: Int, bandwidth_out: Int) extends Module {
     comparator.in.bits.data_in   := maxu_i.bits.raw_data
 
     // 记录前32次比较树的结果
-    when (comparator.out.valid && comparator.out.bits.batch_num =/= maxBatch.U) { max_buffer(max_buffer_point)  := comparator.out.bits.max_out} // 关键路径在这
-    //when (comparator.out.valid) { 
-    //     max_buffer(max_buffer_point)  := comparator.out.bits.max_out
-    // } // 关键路径在这
-    // max_buffer_point := Mux(comparator.out.valid, max_buffer_point + 1.U, 
-    //                         Mux(max_buffer_point === maxBatch.U, 0.U, max_buffer_point))
+    when (comparator.out.valid && comparator.out.bits.batch_num =/= maxBatch.U) { max_buffer(max_buffer_point) := comparator.out.bits.max_out} // 关键路径在这
     // ============== 小树合一 =================
     FirstStageCompareDone  := comparator.out.valid && (comparator.out.bits.batch_num === maxBatch.U - 1.U)
     when (FirstStageCompareDone) {
@@ -106,8 +95,8 @@ class SmallComparatorTreeLevel (SmallTreeBandwidth: Int) extends Module {
 }
 
 
-// class ComparatorPipline_i extends Bundle { 
-//     val data_in   = Vec(32, UInt(bitwidth.W))
+// class ComparatorPipline_i() extends Bundle { 
+//     val data_in   = Vec(inNums, UInt(bitwidth.W))
 //     val batch_num = UInt(9.W)
 // }
 
@@ -126,7 +115,7 @@ class ComparatorTree32bit extends Module {
                             val max_out   = UInt(bitwidth.W)
                             val batch_num = UInt(9.W)})
     })
-    val TreeLevel1 = Module(new SmallComparatorTreeLevel(32)).io
+    val TreeLevel1                = Module(new SmallComparatorTreeLevel(32)).io
     TreeLevel1.in.valid          := io.in.valid
     TreeLevel1.in.bits.data_in   := io.in.bits.data_in
     TreeLevel1.in.bits.batch_num := io.in.bits.batch_num
@@ -134,12 +123,12 @@ class ComparatorTree32bit extends Module {
     val TreeLevel1_out_valid     = RegInit(false.B)
     val TreeLevel1_out_max_out   = RegInit(VecInit(Seq.fill(16)(0.U(bitwidth.W))))
     val TreeLevel1_out_batch_num = RegInit(0.U(9.W))
-    TreeLevel1_out_valid     := TreeLevel1.out.valid
-    TreeLevel1_out_max_out   := TreeLevel1.out.bits.max_out
-    TreeLevel1_out_batch_num := TreeLevel1.out.bits.batch_num 
+    TreeLevel1_out_valid        := TreeLevel1.out.valid
+    TreeLevel1_out_max_out      := TreeLevel1.out.bits.max_out
+    TreeLevel1_out_batch_num    := TreeLevel1.out.bits.batch_num 
 
 
-    val TreeLevel2 = Module(new SmallComparatorTreeLevel(16)).io
+    val TreeLevel2                = Module(new SmallComparatorTreeLevel(16)).io
     TreeLevel2.in.valid          := TreeLevel1_out_valid     
     TreeLevel2.in.bits.data_in   := TreeLevel1_out_max_out   
     TreeLevel2.in.bits.batch_num := TreeLevel1_out_batch_num 
@@ -147,11 +136,11 @@ class ComparatorTree32bit extends Module {
     val TreeLevel2_out_valid     = RegInit(false.B)
     val TreeLevel2_out_max_out   = RegInit(VecInit(Seq.fill(8)(0.U(bitwidth.W))))
     val TreeLevel2_out_batch_num = RegInit(0.U(9.W))
-    TreeLevel2_out_valid     := TreeLevel2.out.valid
-    TreeLevel2_out_max_out   := TreeLevel2.out.bits.max_out
-    TreeLevel2_out_batch_num := TreeLevel2.out.bits.batch_num 
+    TreeLevel2_out_valid        := TreeLevel2.out.valid
+    TreeLevel2_out_max_out      := TreeLevel2.out.bits.max_out
+    TreeLevel2_out_batch_num    := TreeLevel2.out.bits.batch_num 
     
-    val TreeLevel3 = Module(new SmallComparatorTreeLevel(8)).io
+    val TreeLevel3                = Module(new SmallComparatorTreeLevel(8)).io
     TreeLevel3.in.valid          := TreeLevel2_out_valid
     TreeLevel3.in.bits.data_in   := TreeLevel2_out_max_out
     TreeLevel3.in.bits.batch_num := TreeLevel2_out_batch_num 
@@ -159,11 +148,11 @@ class ComparatorTree32bit extends Module {
     val TreeLevel3_out_valid     = RegInit(false.B)
     val TreeLevel3_out_max_out   = RegInit(VecInit(Seq.fill(4)(0.U(bitwidth.W))))
     val TreeLevel3_out_batch_num = RegInit(0.U(9.W))
-    TreeLevel3_out_valid     := TreeLevel3.out.valid
-    TreeLevel3_out_max_out   := TreeLevel3.out.bits.max_out
-    TreeLevel3_out_batch_num := TreeLevel3.out.bits.batch_num 
+    TreeLevel3_out_valid        := TreeLevel3.out.valid
+    TreeLevel3_out_max_out      := TreeLevel3.out.bits.max_out
+    TreeLevel3_out_batch_num    := TreeLevel3.out.bits.batch_num 
 
-    val TreeLevel4 = Module(new SmallComparatorTreeLevel(4)).io
+    val TreeLevel4                = Module(new SmallComparatorTreeLevel(4)).io
     TreeLevel4.in.valid          := TreeLevel3_out_valid    
     TreeLevel4.in.bits.data_in   := TreeLevel3_out_max_out  
     TreeLevel4.in.bits.batch_num := TreeLevel3_out_batch_num
@@ -171,11 +160,11 @@ class ComparatorTree32bit extends Module {
     val TreeLevel4_out_valid     = RegInit(false.B)
     val TreeLevel4_out_max_out   = RegInit(VecInit(Seq.fill(2)(0.U(bitwidth.W))))
     val TreeLevel4_out_batch_num = RegInit(0.U(9.W))
-    TreeLevel4_out_valid     := TreeLevel4.out.valid
-    TreeLevel4_out_max_out   := TreeLevel4.out.bits.max_out
-    TreeLevel4_out_batch_num := TreeLevel4.out.bits.batch_num 
+    TreeLevel4_out_valid        := TreeLevel4.out.valid
+    TreeLevel4_out_max_out      := TreeLevel4.out.bits.max_out
+    TreeLevel4_out_batch_num    := TreeLevel4.out.bits.batch_num 
     
-    val TreeLevel5 = Module(new SmallComparatorTreeLevel(2)).io
+    val TreeLevel5                = Module(new SmallComparatorTreeLevel(2)).io
     TreeLevel5.in.valid          := TreeLevel4_out_valid    
     TreeLevel5.in.bits.data_in   := TreeLevel4_out_max_out  
     TreeLevel5.in.bits.batch_num := TreeLevel4_out_batch_num

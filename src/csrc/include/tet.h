@@ -3,12 +3,12 @@
 
 // DPI-C
 #include "verilated_dpi.h"
-// #include "Vtb__Dpi.h"
+// #include "Vtop__Dpi.h"
 #include "svdpi.h"
 // verilator
 #include "verilated.h"
 #include "verilated_vcd_c.h"
-#include "Vtb.h"
+#include "Vtop.h"
 
 
 // ================ DataType ====================

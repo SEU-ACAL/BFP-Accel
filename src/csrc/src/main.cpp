@@ -7,7 +7,7 @@ vluint64_t sim_time = 0;
 
 VerilatedContext* contextp = NULL;
 VerilatedVcdC* tfp = NULL;
-static Vtb* top;
+static Vtop* top;
 
 int tet_step = 1; // 记录一共走了多少步，出错时抛出，方便单步调试到周围 
 
