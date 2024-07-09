@@ -173,14 +173,17 @@ class ComparatorTree64bit extends Module {
     TreeLevel6.in.bits.data_in   := TreeLevel5_out_max_out  
     TreeLevel6.in.bits.batch_num := TreeLevel5_out_batch_num
 
-    // val counter = RegInit(0.U(3.W))  // 3位足以计数到6
-
-    // counter  := Mux(io.in.valid, 5.U, counter + 1.U)
+    // val TreeLevel6_out_valid     = RegInit(false.B)
+    // val TreeLevel6_out_max_out   = RegInit(0.U(bitwidth.W))
+    // val TreeLevel6_out_batch_num = RegInit(0.U((log2Up(maxBatch)+1).W))
+    // TreeLevel6_out_valid        := TreeLevel6.out.valid
+    // TreeLevel6_out_max_out      := TreeLevel6.out.bits.max_out(0)
+    // TreeLevel6_out_batch_num    := TreeLevel6.out.bits.batch_num 
 
     // io.out.valid            := Mux(counter =/= 6.U, false.B, Mux(TreeLevel6.out.valid, true.B, false.B))
     io.out.valid            := TreeLevel6.out.valid
     io.out.bits.max_out     := TreeLevel6.out.bits.max_out(0)
-    io.out.bits.batch_num   := TreeLevel6.out.bits.batch_num
+    io.out.bits.batch_num   := TreeLevel6.out.bits.batch_num 
 }
 
 class ComparatorTree32bit extends Module {

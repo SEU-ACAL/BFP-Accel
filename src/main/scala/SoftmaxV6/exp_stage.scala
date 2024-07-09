@@ -28,7 +28,8 @@ class exp_stage(bandwidth_in: Int, bandwidth_out: Int) extends Module {
     input_expu_i.ready  := true.B
     maxexp_expu_i.ready := true.B
     // ======================= DRAM ==========================
-    val mem = SyncReadMem(16, UInt(lut_bandwidth.W))
+    val mem = Mem(16, UInt(lut_bandwidth.W))
+    // val mem = SyncReadMem(16, UInt(lut_bandwidth.W))
     loadMemoryFromFileInline(mem, "/home/shiroha/Code/TETris/Backend/ml-accelerator/src/main/scala/SoftmaxV6/data/lut_16x256", MemoryLoadFileType.Hex); 
     // ======================= SRAM ==========================
     val lut = VecInit((Seq.fill(cycle_bandwidth/2))(SRAM(2, UInt(lut_bandwidth.W), 2, 2, 0))) // Declare a 2 read, 2 write, 0 read-write ported SRAM with 16-bit UInt data members
@@ -44,8 +45,7 @@ class exp_stage(bandwidth_in: Int, bandwidth_out: Int) extends Module {
             BitPat("b10000") -> 5.U, 
             BitPat("b10001") -> 6.U, 
             BitPat("b10010") -> 7.U, BitPat("b10011") -> 7.U, BitPat("b10100") -> 7.U, BitPat("b10101") -> 7.U, BitPat("b10110") -> 7.U, BitPat("b10111") -> 7.U, BitPat("b11000") -> 7.U, BitPat("b11001") -> 7.U, BitPat("b11010") -> 7.U, BitPat("b11011") -> 7.U, BitPat("b11100") -> 7.U, BitPat("b11101") -> 7.U, BitPat("b11110") -> 7.U, BitPat("b11111") -> 7.U,  
-        )) 
-        
+        ))    
     }
     // ======================= seu  ==========================
     val seu = Module(new SEU(cycle_bandwidth)).io
@@ -60,7 +60,7 @@ class exp_stage(bandwidth_in: Int, bandwidth_out: Int) extends Module {
             lut(i).writePorts(0).enable  := true.B
             lut(i).writePorts(1).enable  := true.B
             lut(i).writePorts(0).address := 0.U
-            lut(i).writePorts(1).address := 0.U
+            lut(i).writePorts(1).address := 1.U
 
             lut(i).writePorts(0).data    := mem(share_exp*2.U) // 对到对应索引
             lut(i).writePorts(1).data    := mem(share_exp*2.U+1.U) // 对到对应索引
@@ -95,6 +95,7 @@ class exp_stage(bandwidth_in: Int, bandwidth_out: Int) extends Module {
     val expu_data_in_bits_rate_vec    = WireInit(VecInit(Seq.fill(cycle_bandwidth)(0.U(rate_bitwidth.W))))  // Input
 
     val expu_data_out_valid           = RegInit(false.B)                                                        // output
+    val expu_data_out_bits_batch_num  = RegInit(0.U(log2Up(maxBatch).W))                                       // output
     val exp_vec                       = RegInit(VecInit(Seq.fill(cycle_bandwidth)(0.U(expvalue_bitwidth.W))))   // output
 
     expu_data_in_valid               := subu.data_out.valid
@@ -159,7 +160,8 @@ class exp_stage(bandwidth_in: Int, bandwidth_out: Int) extends Module {
         }
     }
 
-    expu_data_out_valid := expu_data_in_valid
+    expu_data_out_valid             := expu_data_in_valid
+    expu_data_out_bits_batch_num    := expu_data_in_bits_batch_num  
 
     // ========================== Interpolation =====================================
     // val itru = Module(new InterpolationU(cycle_bandwidth)).io
@@ -171,12 +173,20 @@ class exp_stage(bandwidth_in: Int, bandwidth_out: Int) extends Module {
 
 
      // ======================= add ==========================
+    val sum                 = RegInit((0.U(sum_bitwidth.W)))
+
     val AdderTree = Module(new AdderTree(64)).io
-    AdderTree.data_in.valid              := expu_data_out_valid
-    AdderTree.data_in.bits               := Mux(AdderTree.data_in.valid, exp_vec, VecInit(Seq.fill(cycle_bandwidth)(0.U((expvalue_bitwidth).W))))
-    when (AdderTree.sum.valid) {
+    AdderTree.in.valid           := expu_data_out_valid    
+    AdderTree.in.bits.batch_num  := expu_data_out_bits_batch_num
+    AdderTree.in.bits.data_in    := Mux(AdderTree.in.valid, exp_vec, VecInit(Seq.fill(cycle_bandwidth)(0.U((expvalue_bitwidth).W))))
+
+
+    when (AdderTree.out.valid) { sum := sum + AdderTree.out.bits.sum}
+
+
+    when (AdderTree.out.valid & (AdderTree.out.bits.batch_num === (maxBatch - 1).U)) {
         expu_expdiv_o.valid              := true.B
-        expu_expdiv_o.bits.sum           := AdderTree.sum.bits 
+        expu_expdiv_o.bits.sum           := sum
     }.otherwise {
         expu_expdiv_o.valid              := false.B
         expu_expdiv_o.bits.sum           := 0.U
@@ -323,49 +333,68 @@ class SUBU(numElements: Int) extends Module {
 
 class AdderTreeLevel (AdderTreeBandwidth: Int) extends Module {
     val io = IO(new Bundle {
-        val in  = Flipped(Valid(Vec(AdderTreeBandwidth, UInt(AdderinBitwidth.W))))
-        val out = Valid(Vec(AdderTreeBandwidth/4, UInt(AdderinBitwidth.W)))
+        val in  = Flipped(Valid(new Bundle {
+                            val data_in   = Vec(AdderTreeBandwidth, UInt(AdderinBitwidth.W))
+                            val batch_num = UInt((log2Up(maxBatch)).W)}))
+        val out = Valid(new Bundle {
+                            val sum       = Vec(AdderTreeBandwidth/4, UInt(AdderinBitwidth.W))
+                            val batch_num = UInt((log2Up(maxBatch)).W)})
     })
-    for (i <- 0 until AdderTreeBandwidth/4) { io.out.bits(i) := io.in.bits(i * 4) + io.in.bits(i * 4 + 1) + io.in.bits(i * 4 + 2) + io.in.bits(i * 4 + 3)}
-    io.out.valid := io.in.valid
+    for (i <- 0 until AdderTreeBandwidth/4) { io.out.bits.sum(i) := io.in.bits.data_in(i * 4) + io.in.bits.data_in(i * 4 + 1) + io.in.bits.data_in(i * 4 + 2) + io.in.bits.data_in(i * 4 + 3)}
+    
+    io.out.valid          := io.in.valid
+    io.out.bits.batch_num := io.in.bits.batch_num
 }
 
 class AdderTree(numElements: Int) extends Module {
     val io = IO(new Bundle {
-        val data_in   = Flipped(Valid(Vec(numElements, UInt(exp_bitwidth.W))))
-        val sum      = Valid(UInt(frac_bitwidth.W))
+        val in  = Flipped(Valid(new Bundle {
+                            val data_in   = Vec(numElements, UInt(exp_bitwidth.W))
+                            val batch_num = UInt((log2Up(maxBatch)).W)}))
+        val out = Valid(new Bundle {
+                            val sum       = UInt(sum_bitwidth.W)
+                            val batch_num = UInt((log2Up(maxBatch)).W)})
     })
 
-    val TreeLevel1_in_valid     = RegInit(false.B)
-    val TreeLevel1_in_bits      = RegInit(VecInit(Seq.fill(64)(0.U(exp_bitwidth.W))))
-    TreeLevel1_in_valid        := io.data_in.valid
-    TreeLevel1_in_bits         := io.data_in.bits
+    val TreeLevel1_in_valid             = RegInit(false.B)
+    val TreeLevel1_in_bits_data_in      = RegInit(VecInit(Seq.fill(64)(0.U(exp_bitwidth.W))))
+    val TreeLevel1_in_bits_batch_num    = RegInit(0.U((log2Up(maxBatch)).W))
+    TreeLevel1_in_valid                := io.in.valid
+    TreeLevel1_in_bits_data_in         := io.in.bits.data_in
+    TreeLevel1_in_bits_batch_num       := io.in.bits.batch_num
 
-    val TreeLevel1       = Module(new AdderTreeLevel(64)).io
-    TreeLevel1.in.bits  := TreeLevel1_in_bits
-    TreeLevel1.in.valid := TreeLevel1_in_valid  
+    val TreeLevel1                 = Module(new AdderTreeLevel(64)).io
+    TreeLevel1.in.valid           := TreeLevel1_in_valid  
+    TreeLevel1.in.bits.data_in    := TreeLevel1_in_bits_data_in
+    TreeLevel1.in.bits.batch_num  := TreeLevel1_in_bits_batch_num
 
-    val TreeLevel1_out_valid     = RegInit(false.B)
-    val TreeLevel1_out_bits      = RegInit(VecInit(Seq.fill(16)(0.U(exp_bitwidth.W))))
-    TreeLevel1_out_valid        := TreeLevel1.out.valid
-    TreeLevel1_out_bits         := TreeLevel1.out.bits
+    val TreeLevel1_out_valid             = RegInit(false.B)
+    val TreeLevel1_out_bits_sum          = RegInit(VecInit(Seq.fill(16)(0.U(exp_bitwidth.W))))
+    val TreeLevel1_out_bits_batch_num    = RegInit(0.U((log2Up(maxBatch)).W))
+    TreeLevel1_out_valid                := TreeLevel1.out.valid
+    TreeLevel1_out_bits_sum             := TreeLevel1.out.bits.sum
+    TreeLevel1_out_bits_batch_num       := TreeLevel1.out.bits.batch_num
 
     val TreeLevel2       = Module(new AdderTreeLevel(16)).io
-    TreeLevel2.in.valid := TreeLevel1.out.valid
-    TreeLevel2.in.bits  := TreeLevel1.out.bits
+    TreeLevel2.in.valid           := TreeLevel1_out_valid  
+    TreeLevel2.in.bits.data_in    := TreeLevel1_out_bits_sum
+    TreeLevel2.in.bits.batch_num  := TreeLevel1_out_bits_batch_num
     
-    val TreeLevel2_out_valid     = RegInit(false.B)
-    val TreeLevel2_out_bits      = RegInit(VecInit(Seq.fill(4)(0.U(exp_bitwidth.W))))
-    TreeLevel2_out_valid        := TreeLevel2.out.valid
-    TreeLevel2_out_bits         := TreeLevel2.out.bits
+    val TreeLevel2_out_valid             = RegInit(false.B)
+    val TreeLevel2_out_bits_sum          = RegInit(VecInit(Seq.fill(4)(0.U(exp_bitwidth.W))))
+    val TreeLevel2_out_bits_batch_num    = RegInit(0.U((log2Up(maxBatch)).W))
+    TreeLevel2_out_valid                := TreeLevel2.out.valid
+    TreeLevel2_out_bits_sum             := TreeLevel2.out.bits.sum
+    TreeLevel2_out_bits_batch_num       := TreeLevel2.out.bits.batch_num
 
 
     val TreeLevel3 = Module(new AdderTreeLevel(4)).io
-    TreeLevel3.in.valid := TreeLevel2_out_valid
-    TreeLevel3.in.bits  := TreeLevel2_out_bits
+    TreeLevel3.in.valid           := TreeLevel2_out_valid  
+    TreeLevel3.in.bits.data_in    := TreeLevel2_out_bits_sum
+    TreeLevel3.in.bits.batch_num  := TreeLevel2_out_bits_batch_num
 
 
-
-    io.sum.bits  := TreeLevel3.out.bits(0)
-    io.sum.valid := TreeLevel3.out.valid
+    io.out.valid            := TreeLevel3.out.valid
+    io.out.bits.sum         := TreeLevel3.out.bits.sum(0)
+    io.out.bits.batch_num   := TreeLevel3.out.bits.batch_num
 }
