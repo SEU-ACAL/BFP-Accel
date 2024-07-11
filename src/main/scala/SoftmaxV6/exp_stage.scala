@@ -4,10 +4,10 @@ import chisel3._
 import chisel3.util._
 import chisel3.stage._
 
-import define.MACRO._
-import define.FSM._
-import define.function._
-import define.test._
+import softmax_define.MACRO._
+import softmax_define.FSM._
+import softmax_define.function._
+import softmax_define.test._
 
 import pipeline._
 
@@ -160,8 +160,14 @@ class exp_stage(bandwidth_in: Int, bandwidth_out: Int) extends Module {
         }
     }
 
-    expu_data_out_valid             := expu_data_in_valid
-    expu_data_out_bits_batch_num    := expu_data_in_bits_batch_num  
+    val expu_data_out_valid_tmp      = RegInit(false.B)      
+    expu_data_out_valid_tmp         := expu_data_in_valid
+    expu_data_out_valid             := expu_data_out_valid_tmp
+
+    val expu_data_out_bits_batch_num_tmp  = RegInit(0.U(log2Up(maxBatch).W)) 
+
+    expu_data_out_bits_batch_num_tmp    := expu_data_in_bits_batch_num  
+    expu_data_out_bits_batch_num        := expu_data_out_bits_batch_num_tmp   // 屎山代码，这里要缓一周期
 
     // ========================== Interpolation =====================================
     // val itru = Module(new InterpolationU(cycle_bandwidth)).io

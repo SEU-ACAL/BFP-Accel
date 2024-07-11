@@ -1,12 +1,12 @@
-package pipeline
+package layernorm_pipeline
 
 import chisel3._
 import chisel3.util._
 import chisel3.stage._
 
-import softmax_define.MACRO._
-import softmax_define.FSM._
-import softmax_define.function._
+import define.MACRO._
+import define.FSM._
+import define.function._
 
 
 class max_exp extends Bundle { val max  = UInt(bitwidth.W) }

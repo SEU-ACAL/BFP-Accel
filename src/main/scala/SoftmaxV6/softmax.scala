@@ -4,16 +4,16 @@ import chisel3._
 import chisel3.util._
 import chisel3.stage._
 
-import define.MACRO._
-import define.FSM._
+import softmax_define.MACRO._
+import softmax_define.FSM._
 
 import max_stage._
 import exp_stage._
 import div_stage._
 import pipeline._
 
-import chisel3.util.experimental.loadMemoryFromFileInline
-import firrtl.annotations.LoadMemoryAnnotation
+// import chisel3.util.experimental.loadMemoryFromFileInline
+// import firrtl.annotations.LoadMemoryAnnotation
 
 class SoftMax_Input_Stage1 extends Bundle { 
     val raw_data = Vec(cycle_bandwidth, UInt(bitwidth.W))

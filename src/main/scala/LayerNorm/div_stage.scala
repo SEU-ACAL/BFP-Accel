@@ -4,11 +4,10 @@ import chisel3._
 import chisel3.util._
 import chisel3.stage._
 
-import softmax_define.MACRO._
-import softmax_define.FSM._
-import softmax_define.test._
+import layernorm_define.MACRO._
 
-import pipeline._
+
+import layernorm_pipeline._
 
 
 class div_input extends Bundle { 
