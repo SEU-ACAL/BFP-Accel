@@ -30,9 +30,9 @@ class exp_stage(bandwidth_in: Int, bandwidth_out: Int) extends Module {
     // ======================= DRAM ==========================
     val mem = Mem(16, UInt(lut_bandwidth.W))
     // val mem = SyncReadMem(16, UInt(lut_bandwidth.W))
-    loadMemoryFromFileInline(mem, "/home/shiroha/Code/TETris/Backend/ml-accelerator/src/main/scala/SoftmaxV6/data/lut_16x256", MemoryLoadFileType.Hex); 
+    loadMemoryFromFileInline(mem, "/home/shiroha/Code/TETris/Backend/ml-accelerator/src/main/scala/SoftmaxV6/data/lut_16x120", MemoryLoadFileType.Hex); 
     // ======================= SRAM ==========================
-    val lut = VecInit((Seq.fill(cycle_bandwidth/2))(SRAM(2, UInt(lut_bandwidth.W), 2, 2, 0))) // Declare a 2 read, 2 write, 0 read-write ported SRAM with 16-bit UInt data members
+    val lut = VecInit((Seq.fill(cycle_bandwidth))(SyncReadMem(lut_depth, UInt(lut_width.W)))) // 模拟双端口，后端替换为双端口综合
     // ====================== 非均匀对表 =========================
     val share_exp = RegInit(0.U(log2Up(exp_bitwidth).W))
     when (input_expu_i.valid) {

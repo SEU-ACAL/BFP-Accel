@@ -20,6 +20,16 @@ object MACRO {
     val AdderinBitwidth         = 16
     val dataout_bitwidth        = 16
 
+    // =============== LUT
+    val partSet_size       = 128 // 有多少个数
+    val partSet_num        = 19 // 有多少个小表
+    val fullSet_size       = partSet_size * partSet_num // 除去underflow和overflower一共19个set可用
+
+    val lut_width           = 8
+    val lut_depth           = partSet_size / lut_width / 2 // set数翻倍了，lut深度折半了
+    val lut_bitwidth        = 15
+    val lut_set             = cycle_bandwidth // 实际是32个
+
     // =============== top
     val datain_bandwidth        = 1024
     val cycle_bandwidth         = 64
