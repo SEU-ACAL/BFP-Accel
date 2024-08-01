@@ -8,28 +8,6 @@ import chisel3.stage._
 object MACRO { 
     // =============== MAXU 
     
-    // =============== EXPU
-    val sum_bitwidth            = 16
-
-    val idx_bitwidth            = 5 // 取五位做索引 
-    val rate_bitwidth           = 5 // 取五位做插值
-
-    val lut_bandwidth           = 256
-    val lut_datawidth           = 16
-
-    val AdderinBitwidth         = 16
-    val dataout_bitwidth        = 16
-
-    // =============== top
-    val datain_bandwidth        = 1024
-    val cycle_bandwidth         = 64
-    val maxBatch                = datain_bandwidth / cycle_bandwidth // 最大batch数
-
-    // ============== global
-    val bitwidth                = 16
-    val exp_bitwidth            = 5
-    val frac_bitwidth           = 10
-    val expvalue_bitwidth       = 16
 
 
 

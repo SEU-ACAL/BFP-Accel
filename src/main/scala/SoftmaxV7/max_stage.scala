@@ -1,4 +1,4 @@
-package mul_stage
+package max_stage
 
 import chisel3._
 import chisel3.util._
@@ -17,12 +17,47 @@ class max_input extends Bundle {
 }
 
 class max_stage(bandwidth_in: Int, bandwidth_out: Int) extends Module {
-    val mulu_i        = IO(Flipped(Decoupled(new max_input)))
-    val mulu_mulexp_o = IO(Decoupled(new max_exp))
-
-
+    val maxu_i                  = IO(Flipped(Decoupled(new max_input)))
+    val maxu_maxexp_o           = IO(Decoupled(new max_exp))
+    val FirstStageCompareDone   = RegInit(false.B)
+    val SecondStageCompareDone  = RegInit(false.B)
+    // ======================= FSM ==========================
+    maxu_i.ready         := true.B
+    // ======================================================
+    val max_buffer        = RegInit(VecInit(Seq.fill(maxBatch)(0.U(bitwidth.W))))
+    val max_buffer_point  = WireInit(0.U(log2Up(maxBatch).W))
+    // ===================== 流水线比较 ============
+    val comparator = Module(new ComparatorTree64bit).io
+    comparator.in.valid          := maxu_i.valid
+    when (FirstStageCompareDone | SecondStageCompareDone) {
+        comparator.in.bits.batch_num := maxBatch.U
+        comparator.in.bits.data_in   := VecInit(max_buffer.toSeq ++ Seq.fill(48)(0.U))
+    }.otherwise {
+        comparator.in.bits.batch_num := Cat(0.U, maxu_i.bits.batch_num)
+        comparator.in.bits.data_in   := maxu_i.bits.raw_data
+    }
+    // 记录前16次比较树的结果
+    when (comparator.out.valid && comparator.out.bits.batch_num =/= maxBatch.U) { 
+        max_buffer(max_buffer_point)  := comparator.out.bits.max_out
+        max_buffer_point              := comparator.out.bits.batch_num
+    } // 关键路径在这
+    // ============== 小树合一 =================
+    FirstStageCompareDone  := comparator.out.valid && (comparator.out.bits.batch_num === maxBatch.U - 1.U)
+    // when (FirstStageCompareDone) {
+    //     comparator.in.valid          := true.B
+    //     comparator.in.bits.batch_num := maxBatch.U
+    //     comparator.in.bits.data_in   := max_buffer
+    // }
+    // ============== 输出 =================
+    SecondStageCompareDone := comparator.out.valid && (comparator.out.bits.batch_num === maxBatch.U)
+    when (SecondStageCompareDone) {
+        maxu_maxexp_o.valid      := true.B
+        maxu_maxexp_o.bits.max   := comparator.out.bits.max_out
+    }.otherwise {
+        maxu_maxexp_o.valid      := false.B
+        maxu_maxexp_o.bits.max   := 0.U
+    }
 }
-
 
 // FP16比较器
 class ComparatorFP16 (bitwidth: Int) extends Module {

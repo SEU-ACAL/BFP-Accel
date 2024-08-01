@@ -1,4 +1,4 @@
-package gelu_define
+package softmax_define
 
 import chisel3._
 import chisel3.util._
@@ -6,10 +6,7 @@ import chisel3.stage._
 
 
 object MACRO { 
-    // =============== 
-
-
-    // =============== top
+      // =============== top
     val datain_bandwidth        = 1024
     val cycle_bandwidth         = 64
     val maxBatch                = datain_bandwidth / cycle_bandwidth // 最大batch数
@@ -18,7 +15,29 @@ object MACRO {
     val bitwidth                = 16
     val exp_bitwidth            = 5
     val frac_bitwidth           = 10
-    val expvalue_bitwidth       = 16
+    val expvalue_bitwidth       = 15
+    // =============== MAXU 
+    
+    // =============== EXPU
+    val sum_bitwidth            = 16
+
+    val idx_bitwidth            = 5 // 取五位做索引 
+    val rate_bitwidth           = 5 // 取五位做插值
+
+    val AdderinBitwidth         = 16
+    val dataout_bitwidth        = 16
+
+    // =============== LUT
+    val partSet_size       = 128 // 有多少个数
+    val partSet_num        = 19 // 有多少个小表
+    val fullSet_size       = partSet_size * partSet_num // 除去underflow和overflower一共19个set可用
+
+    val lut_width           = 8
+    val lut_depth           = partSet_size / lut_width / 2 // set数翻倍了，lut深度折半了
+    val lut_bitwidth        = 15
+    val lut_set             = cycle_bandwidth // 实际是32个
+
+
 
 
 
